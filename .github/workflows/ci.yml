@@ -103,8 +103,12 @@ jobs:
     # 这样发布流程不依赖本机环境，"v0.2.0 的产物由 v0.2.0 的提交构建"也可追溯。
     # 正文不在此处设置：Release 标题与说明由仓库所有者在 GitHub 上填写，
     # 避免自动覆盖人工润色的发布说明。
+    #
+    # needs 是发布门禁：此前没有它，lint/测试/打包任一失败也会照样把产物发出去，
+    # "已发布产物通过了 CI"这一前提就不成立。
     if: startsWith(github.ref, 'refs/tags/v')
     name: 发布产物（打 tag 时触发）
+    needs: [lint, test, test-windows, package]
     runs-on: ubuntu-latest
     permissions:
       contents: write
