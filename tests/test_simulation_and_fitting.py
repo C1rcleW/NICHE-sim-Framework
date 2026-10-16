@@ -938,3 +938,89 @@ def test_web_fit_returns_400_with_hint_for_unmappable_model(sim_df: pd.DataFrame
 
     good = client.post("/api/fit", json={"model_name": "wellbeing", "robust": False})
     assert good.status_code == 200, good.text
+
+
+# ── 拟合器输入校验（round-2 审查 A-01 / A-02）────────────────────────────
+#
+# 回归三件事：
+# 1. `p0` 含 NaN 时，`solve_ivp` **不会**抛异常，而是让步长控制陷入死循环——
+#    实测 25 秒未返回（被 kill）。在 Web 端这还会连带阻塞整个事件循环。
+# 2. `inf` 数据只被 NaN 检查漏过，一路传到 R² 变成 NaN，写进 summary_json 后
+#    由 JSONResponse 在构造阶段抛 ValueError（错误暴露在离现场很远的地方）。
+# 3. 非有限边界（inf/NaN）会让优化器行为未定义。
+
+
+def _fit_df(steps: int = 30) -> pd.DataFrame:
+    _seed()
+    env = Environment()
+    sim = Simulation(env, seed=42)
+    household = Household(name="Smith Household", environment=env)
+    env.add_agent(household)
+    household.add_member(FamilyMember(name="Father", age=40, role_name="parent",
+                                      environment=env))
+    household.add_member(FamilyMember(name="Child", age=10, role_name="child",
+                                      environment=env))
+    recorder = StateRecorder(record_agents=True)
+    sim.add_recorder(recorder)
+    sim.run(steps)
+    return recorder.to_dataframe()
+
+
+def _wellbeing_setup() -> tuple[pd.DataFrame, int, list[tuple[float, float]]]:
+    df = _fit_df()
+    probe = make_fitter("wellbeing")
+    n = probe.n_params
+    return df, n, [(1e-4, 5.0)] * n
+
+
+def test_nan_initial_params_raise_instead_of_hanging() -> None:
+    """NaN 初值必须立刻报错——修复前会让 solve_ivp 无限挂起。"""
+    df, n, _ = _wellbeing_setup()
+    p0 = [0.5] * n
+    p0[0] = float("nan")
+    with pytest.raises(ValueError, match="非有限值"):
+        make_fitter("wellbeing").fit_from_dataframe(df, p0=p0)
+
+
+def test_infinite_initial_params_raise() -> None:
+    df, n, _ = _wellbeing_setup()
+    p0 = [0.5] * n
+    p0[1] = float("inf")
+    with pytest.raises(ValueError, match="非有限值"):
+        make_fitter("wellbeing").fit_from_dataframe(df, p0=p0)
+
+
+def test_non_finite_bounds_raise() -> None:
+    """inf 上界 / NaN 下界 / 下界>上界 都必须被拒。"""
+    df, _, bounds = _wellbeing_setup()
+    for mutate, pattern in (
+        (lambda b: (b[0][0], float("inf")), "非有限值"),
+        (lambda b: (float("nan"), b[0][1]), "非有限值"),
+        (lambda b: (5.0, 1.0), "下界大于上界"),
+    ):
+        bad = list(bounds)
+        bad[0] = mutate(bad)
+        with pytest.raises(ValueError, match=pattern):
+            make_fitter("wellbeing").fit_from_dataframe(df, bounds=bad)
+
+
+def test_non_finite_data_is_rejected_with_clear_message() -> None:
+    """inf 与 NaN 数据都要被拒，且错误信息说明是非有限值。"""
+    df, _, _ = _wellbeing_setup()
+    target = next(c for c in df.columns if c.startswith("state_happiness"))
+    for value in (np.inf, np.nan):
+        bad = df.copy()
+        bad.loc[bad.index[:5], target] = value
+        with pytest.raises(ValueError, match="非有限值"):
+            make_fitter("wellbeing").fit_from_dataframe(bad)
+
+
+def test_valid_inputs_still_fit() -> None:
+    """校验不得误伤正常路径。"""
+    df, n, bounds = _wellbeing_setup()
+    fitter = make_fitter("wellbeing")
+    fitter.fit_from_dataframe(df, p0=[0.5] * n, bounds=bounds)
+    info = fitter.summary_json()
+    assert isinstance(info["converged"], bool)
+    # summary_json 必须能被严格序列化：JSONResponse 不允许 NaN/Infinity
+    json.dumps(info, allow_nan=False)

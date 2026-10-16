@@ -136,8 +136,13 @@ class ABMFitter:
     def _validate_data(self, t: np.ndarray, y: np.ndarray) -> None:
         if len(t) < 10:
             raise ValueError(f'Need at least 10 time points, got {len(t)}.')
-        if np.any(np.isnan(y)):
-            raise ValueError('Data contains NaN values.')
+        # 同时拒绝 NaN 与 ±inf：只查 NaN 时，inf 会一路传到 R² 变成 NaN，
+        # 再写进 summary_json；而 JSONResponse 不允许 NaN/Infinity，
+        # 于是响应构造阶段直接抛 ValueError（错误在离现场很远的地方暴露）。
+        if not np.all(np.isfinite(t)):
+            raise ValueError('时间轴包含非有限值（NaN 或 inf）。')
+        if not np.all(np.isfinite(y)):
+            raise ValueError('数据包含非有限值（NaN 或 inf）。')
         if np.ptp(y, axis=0).max() < 1e-5:
             # stacklevel=2 让告警指向调用者，而不是本模块——否则调用方无法定位来源
             warnings.warn('Data has near-zero variance — fitting may be unreliable.', stacklevel=2)
@@ -153,6 +158,12 @@ class ABMFitter:
         实测（5 人 2 户，seed=3）：steps=120 时缩放 R²=0.7065、``r``/``s`` 贴上界；
         steps=240 时 R²=-0.1377；撤销缩放后分别为 0.9661 与 0.9390 且无贴边参数。
         """
+        # 非有限输入必须在这里挡下：把 NaN 交给 solve_ivp 不会抛异常，
+        # 而是让内部步长控制陷入极小步长的死循环——实测 p0=[nan, 0.5] 时
+        # 25 秒未返回（被 kill），加本守卫后 0.0092 秒返回哨兵。
+        if not (np.all(np.isfinite(params)) and np.all(np.isfinite(t)) and np.all(np.isfinite(y0))):
+            return None
+
         step = float(np.diff(t).mean()) if len(t) > 1 else float(abs(t[-1]) or 1.0)
 
         def rhs(t_, y_):
@@ -212,6 +223,7 @@ class ABMFitter:
         n = self.n_params
         if p0 is None:
             p0 = [0.5] * n
+        p0 = self._check_p0(p0, n)
         self.bounds = self._normalize_bounds(bounds, n)
 
         result = minimize(self._objective, p0, args=(t, y_true, y_true[0]),
@@ -292,6 +304,24 @@ class ABMFitter:
 
     # ── Internals ────────────────────────────────────────────────────────
 
+    def _check_p0(self, p0: Any, n: int) -> list[float]:
+        """校验初始参数向量：长度、有限性。
+
+        NaN 初值必须在这里挡下——``solve_ivp`` 收到 NaN 参数不会抛异常，
+        而是让步长控制陷入死循环（实测 25 秒未返回）。把它变成明确的报错，
+        比让它挂住调用方（尤其是 Web 端：会连带阻塞整个事件循环）好得多。
+        """
+        values = [float(v) for v in p0]
+        if len(values) != n:
+            raise ValueError(f'初始参数数量 ({len(values)}) 与模型参数数量 ({n}) 不一致')
+        bad = [(i, v) for i, v in enumerate(values) if not np.isfinite(v)]
+        if bad:
+            raise ValueError(
+                f'初始参数包含非有限值：{bad}。'
+                'NaN/inf 初值会让积分器不返回；请给出有限初值。'
+            )
+        return values
+
     @staticmethod
     def _normalize_bounds(bounds: Any, n: int) -> list[tuple[float, float]]:
         """把边界规范化为 list[(lo, hi)]。
@@ -313,6 +343,14 @@ class ABMFitter:
         pairs = [(float(lo), float(hi)) for lo, hi in bounds]
         if len(pairs) != n:
             raise ValueError(f'边界数量 ({len(pairs)}) 与参数数量 ({n}) 不一致')
+        # 非有限边界（如 inf）会让优化器行为未定义，且 _parameters_at_bounds
+        # 的比较失去意义；NaN 边界则会让整个优化静默返回 NaN 参数。
+        bad = [(i, lo, hi) for i, (lo, hi) in enumerate(pairs)
+               if not (np.isfinite(lo) and np.isfinite(hi))]
+        if bad:
+            raise ValueError(f'边界包含非有限值：{bad}。请给出有限的上下界。')
+        if any(lo > hi for lo, hi in pairs):
+            raise ValueError(f'存在下界大于上界的边界：{[p for p in pairs if p[0] > p[1]]}')
         return pairs
 
     def _save_result(self, result: Any, y_true: np.ndarray, t: np.ndarray) -> None:
