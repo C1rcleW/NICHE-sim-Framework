@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from docx import Document
@@ -20,6 +21,7 @@ from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 
 OUTPUT = Path(__file__).resolve().parent.parent / "docs" / "研究设计文档.docx"
+RESULTS = Path(__file__).resolve().parent.parent / "experiments" / "results"
 
 CJK_FONT = "Microsoft YaHei"
 LATIN_FONT = "Calibri"
@@ -30,6 +32,27 @@ MONO_FONT = "Courier New"
 LQ = "\u300c"
 RQ = "\u300d"
 DQ = '"'
+
+
+def load_result(name: str) -> dict:
+    """读取实验结果 JSON。
+
+    第六章与第八章的数字**从结果文件派生**，不再手写：round-2 审查发现手写的
+    数字在代码改动后全部过期（E2/E3/E4、可约性、敏感性 tally），而没有任何
+    测试会因此失败——README 里"五条结论全部成立"当时已是假话。
+    派生后由 `tests/test_experiment_numbers.py` 强制同步。
+    """
+    path = RESULTS / f"{name}.json"
+    if not path.exists():
+        raise SystemExit(
+            f"缺少实验结果文件：{path}\n"
+            f"请先运行 experiments/{name}.py 生成，再构建本文档。"
+        )
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def fmt(value: float, digits: int = 4) -> str:
+    return f"{value:.{digits}f}"
 
 
 def q(text: str) -> str:
@@ -331,108 +354,187 @@ def build() -> Document:
 
     document.add_heading("六、结果", level=1)
 
+    mech = load_result("mechanism_validation")
+    e1, e2, e3, e4 = mech["e1"], mech["e2"], mech["e3"], mech["e4"]
+    seeds, steps = mech["seeds"], mech["steps"]
+    baseline_note = (
+        f"**结果基线**：{len(seeds)} 个种子（{seeds[0]}–{seeds[-1]}）、{steps} 步。"
+        "随机量的数值只在该种子数下成立——配对噪声用系综内标准差估计，"
+        "小 n 会低估噪声、放大信噪比。"
+    )
+
     document.add_heading("6.1 E1：易感性的阶段结构成立", level=2)
+    body(document, baseline_note)
     body(document,
-         '单调性违例 **0 次**；阶段边界的最大跳变为 **2.5×10⁻⁵**（数值上可视为连续）；'
-         '各阶段内部的取值与理论设定完全一致。该结果不依赖随机性。')
+         f"单调性违例 **{e1['monotone_violations']} 次**；阶段边界的最大跳变为 "
+         f"**{fmt(e1['max_boundary_jump'], 8)}**（数值上可视为连续）；"
+         "各阶段内部的取值与理论设定完全一致。该结果不依赖随机性。")
 
     document.add_heading("6.2 E2：效力随阶段单调递减", level=2)
+    # amplification 与 per_stage 在结果 JSON 中是并列列表，按 stage 名连接
+    amp_by_stage = {
+        item["stage"]: item.get("amplification_factor")
+        for item in e2.get("amplification", [])
+    }
+    stage_rows = []
+    for stage in e2["per_stage"]:
+        amp = amp_by_stage.get(stage["stage"])
+        stage_rows.append([
+            stage["stage"],
+            fmt(stage["staged_openness"]),
+            fmt(stage["openness_ratio"]),
+            fmt(stage["observed_ratio"], 3),
+            fmt(amp, 2) if isinstance(amp, (int, float)) else "—",
+        ])
     table(document,
           ["阶段", "易感性", "易感性之比", "实测效力比", "放大倍数"],
-          [["学前期", "0.7225", "1.445", "1.128", "1.28"],
-           ["学龄期", "0.5043", "1.009", "0.833", "1.21"],
-           ["青春期", "0.2874", "0.575", "0.026", "21.79"],
-           ["成年早期", "0.2204", "0.441", "0.017", "26.38"]],
+          stage_rows,
           widths=[90, 80, 90, 90, 80])
     caption(document, "表 1  阶段易感性的实际效力（相对恒定易感性设定的比值）")
+    ratio_chain = " → ".join(fmt(r, 3) for r in e2["ratios"])
     body(document,
-         '**结论**：效力比随发展阶段单调递减（1.128 → 0.833 → 0.026 → 0.017），'
-         '且在易感性低于基准的阶段，影响确实更弱。机制成立。')
-    body(document,
-         '**一个需要解释的现象**：实测效力比远小于易感性之比（青春期放大 21.8 倍）。'
-         '原因是影响存在**负反馈**——影响越强，子代幸福越向父母靠拢，'
-         '亲子差距缩小又反过来压低单位影响量。这说明「易感性下降」对结果的实际影响'
-         '比单纯的系数变化更剧烈。')
+         f"**结论**：效力比随发展阶段单调递减（{ratio_chain}），"
+         "且在易感性低于基准的阶段，影响确实更弱。机制成立。")
+    amp_peak = max(
+        (v for v in amp_by_stage.values() if isinstance(v, (int, float))),
+        default=None,
+    )
+    if amp_peak is not None:
+        body(document,
+             f"**一个需要解释的现象**：实测效力比远小于易感性之比（最大放大 {fmt(amp_peak, 1)} 倍）。"
+             "原因是影响存在**负反馈**——影响越强，子代幸福越向父母靠拢，"
+             "亲子差距缩小又反过来压低单位影响量。这说明「易感性下降」对结果的实际影响"
+             "比单纯的系数变化更剧烈。")
 
     document.add_heading("6.3 E3：剂量-反应单调，但存在适用边界", level=2)
+    dose_rows = [
+        [
+            f"{p['strength']:g}",
+            fmt(p["mean_abs_deviation"]),
+            fmt(p["paired_noise"]),
+            fmt(p["snr"], 2),
+            f"{p['clamped_fraction']:.2%}",
+        ]
+        for p in e3["points"]
+        if p["strength"] > 0
+    ]
     table(document,
           ["影响强度", "平均偏离", "配对噪声", "信噪比", "边界钳位比例"],
-          [["0.5", "0.0437", "0.0091", "4.81", "0.00%"],
-           ["1.0", "0.0534", "0.0117", "4.58", "0.00%"],
-           ["2.0", "0.0602", "0.0137", "4.40", "0.00%"],
-           ["4.0", "0.0644", "0.0173", "3.73", "0.00%"],
-           ["8.0", "0.0789", "0.2856", "0.28", "50.11%"],
-           ["16.0", "0.0947", "0.2811", "0.34", "55.43%"]],
+          dose_rows,
           widths=[80, 80, 80, 70, 100])
     caption(document, "表 2  剂量-反应关系与边界钳位")
+    clean = [p for p in e3["points"]
+             if p["clamped_fraction"] == 0.0 and p["strength"] > 0]
+    clean_snrs = [p["snr"] for p in clean]
     body(document,
-         '**结论**：在无钳位区间内（强度 ≤ 4），剂量-反应关系单调，信噪比均高于 3.7。')
-    body(document,
-         '**一个重要的限定**：当影响强度达到 8 及以上时，子代幸福有**超过一半的时间步'
-         '触及取值边界**，配对噪声从 0.017 跃升至 0.286，信噪比跌到 0.28。'
-         '此时剂量-反应关系不再可信。因此本机制的可信强度上限为 **4**。'
-         '这不是模型缺陷，而是它的适用范围——**超出该范围的行为不应被解释**。')
+         f"**结论**：在无钳位区间内（强度 ≤ {e3['clean_upper_bound']:g}），"
+         f"剂量-反应关系单调，信噪比在 {fmt(min(clean_snrs), 2)}–{fmt(max(clean_snrs), 2)} 之间。")
+    first_clamped = next(
+        (p for p in e3["points"] if p["clamped_fraction"] > 0), None
+    )
+    if first_clamped is not None:
+        noise_jump = (first_clamped["paired_noise"] / clean[-1]["paired_noise"]
+                      if clean and clean[-1]["paired_noise"] else None)
+        jump_text = (
+            f"，配对噪声从 {fmt(clean[-1]['paired_noise'])} 跃升至 {fmt(first_clamped['paired_noise'])}"
+            f"（{fmt(noise_jump, 1)} 倍）"
+            if noise_jump else ""
+        )
+        body(document,
+             f"**一个重要的限定**：当影响强度达到 {first_clamped['strength']:g} 及以上时，"
+             f"子代幸福有 **{first_clamped['clamped_fraction']:.0%} 的时间步触及取值边界**"
+             f"{jump_text}，信噪比跌到 {fmt(first_clamped['snr'], 2)}。"
+             "此时剂量-反应关系不再可信。因此本机制的可信强度上限为 "
+             f"**{e3['clean_upper_bound']:g}**。"
+             "这不是模型缺陷，而是它的适用范围——**超出该范围的行为不应被解释**。")
 
     document.add_heading("6.4 E4：早期影响留下痕迹，但快速衰减", level=2)
     table(document,
           ["时间窗口", "偏离幅度", "配对噪声", "信噪比"],
-          [["童年期", "0.1096", "0.0293", "3.74"],
-           ["成年后", "0.0073", "0.0021", "3.53"]],
+          [["童年期", fmt(e4["childhood"]["mean_deviation"]),
+            fmt(e4["childhood"]["paired_noise"]), fmt(e4["childhood"]["snr"], 2)],
+           ["成年后", fmt(e4["adulthood"]["mean_deviation"]),
+            fmt(e4["adulthood"]["paired_noise"]), fmt(e4["adulthood"]["snr"], 2)]],
           widths=[100, 100, 100, 80])
     caption(document, "表 3  早期影响的滞后效应")
     body(document,
-         '**结论**：早期影响在子代成年后仍可分辨（信噪比 3.53 > 1），'
-         '但效应已衰减到童年期的 **6.7%**。这符合模型的均值回归设定：'
-         '家庭影响会改变轨迹的水平，但不会永久改变系统的回归目标。')
+         f"**结论**：早期影响在子代成年后仍可分辨（信噪比 {fmt(e4['adulthood']['snr'], 2)} > 1），"
+         f"但效应已衰减到童年期的 **{e4['decay_ratio']:.1%}**。这符合模型的均值回归设定："
+         "家庭影响会改变轨迹的水平，但不会永久改变系统的回归目标。")
     body(document,
-         '**这一发现对政策解读很重要**：如果目标是改变长期结果，'
-         '仅靠一次性的影响干预可能不足，需要持续投入或改变回归目标本身。')
+         "**这一发现对政策解读很重要**：如果目标是改变长期结果，"
+         "仅靠一次性的影响干预可能不足，需要持续投入或改变回归目标本身。")
 
     document.add_heading("七、敏感性分析与稳健性", level=1)
+    sens = load_result("sensitivity_analysis")
+    summary = sens["summary"]
     body(document,
-         '由于易感性的取值与阶段年龄边界都不是实证测量值，必须检验结论对它们的依赖。'
-         '本研究扰动了三类参数：')
+         "由于易感性的取值与阶段年龄边界都不是实证测量值，必须检验结论对它们的依赖。"
+         f"本研究扰动了三类参数（每个组合 {len(sens['seeds'])} 个种子）：")
     table(document,
           ["被扰动参数", "扰动范围", "扰动理由"],
           [["阶段边界平移", "−3 ~ +3 年", "埃里克森未给出精确年龄边界"],
            ["易感性整体缩放", "0.70 ~ 1.30", "阶段取值属理论解读，非测量值"],
            ["影响强度", "1 / 2 / 4", "机制强度本身未知"]],
           widths=[130, 110, 210])
-    body(document, '对 25 组（平移 × 缩放）以及 75 组（再叠加强度）参数组合逐一重跑全部检验：')
-    table(document,
-          ["结论", "成立组合数", "判定"],
-          [["P1 易感性阶梯单调且连续", "25 / 25", "稳健"],
-           ["P2 效力比随阶段单调递减", "25 / 25", "稳健"],
-           ["P3 易感性低于基准时影响更弱", "25 / 25", "稳健"],
-           ["P4 无钳位区间内剂量-反应单调且信噪比 > 2", "25 / 25", "稳健"],
-           ["P5 成年后仍可分辨", "75 / 75", "稳健"]],
-          widths=[240, 90, 70])
-    caption(document, "表 4  五条结论在全部参数组合下的稳健性")
+    body(document, "对 25 组（平移 × 缩放）以及 75 组（再叠加强度）参数组合逐一重跑全部检验：")
+    robustness = summary["robustness"]
+    keys = {"P1": "p1_all_pass", "P2": "p2_all_pass", "P3": "p3_all_pass", "P4": "p4_all_pass"}
+    tally_rows = []
+    for claim, tally in summary["tallies"].items():
+        code = claim.split()[0]
+        ok = (robustness.get(keys[code]) if code in keys
+              else robustness.get("p5_pass_rate") == 1.0)
+        tally_rows.append([claim, tally.replace("/", " / "), "稳健" if ok else "**不稳健**"])
+    table(document, ["结论", "成立组合数", "判定"], tally_rows, widths=[240, 90, 70])
+    caption(document, "表 4  五条结论在参数组合下的稳健性")
+    imperfect = []
+    for claim, tally in summary["tallies"].items():
+        got, total = (int(part) for part in tally.split("/"))
+        if got < total:
+            imperfect.append((claim.split()[0], got, total))
+    upper = summary.get("clean_upper_bound_range") or []
+    if imperfect:
+        body(document,
+             "**必须如实说明的限定**：并非五条结论在全部组合下都成立——"
+             + "；".join(
+                 f"{code} 在 {total} 个组合中有 {total - got} 个失效"
+                 for code, got, total in imperfect
+             )
+             + "。机制的存在与否不因参数而改变，但**效力递减的单调性**在部分参数取值下"
+             "会被噪声抹平。报告时应给出具体组合数，而不是笼统声称「全部成立」。")
     body(document,
-         '**核心发现**：扰动参数**不改变任何定性结论**，只改变**适用边界的数值位置**。'
-         '可信强度上限在参数空间中于 **2.0 至 8.0** 之间移动——易感性缩放越高、'
-         '阶段越推迟，系统越早进入钳位区。')
+         "**核心发现**：扰动参数不改变机制的结构性结论，只改变**适用边界的数值位置**。"
+         + (f"可信强度上限在参数空间中于 **{upper[0]:g} 至 {upper[-1]:g}** 之间移动——"
+            if len(upper) >= 2 else "")
+         + "易感性缩放越高、阶段越推迟，系统越早进入钳位区。")
     body(document,
-         '这个结果的政策解读是双向的：一方面，机制的结构性结论可以放心陈述；'
-         '另一方面，**任何具体的定量门槛都必须附带参数条件**，不能作为普遍结论。')
+         "这个结果的政策解读是双向的：一方面，机制的结构性结论可以谨慎陈述；"
+         "另一方面，**任何具体的定量门槛都必须附带参数条件**，不能作为普遍结论。")
 
     document.add_heading("八、一个否定的结果：家庭动力学不能被单一方程概括", level=1)
+    red = load_result("life_stage_reducibility")
+    full_r2 = {code: cond["reducibility"]["full"]["r_squared"]
+               for code, cond in red["conditions"].items()}
     body(document,
-         '研究最初的设计是用「低维常系数微分方程的拟合优度」来检验机制，'
-         '预期是「机制越复杂，方程拟合越差」。实测否定了这个设计，而且否定得很有信息量。')
+         "研究最初的设计是用「低维常系数微分方程的拟合优度」来检验机制，"
+         "预期是「机制越复杂，方程拟合越差」。实测否定了这个设计，而且否定得很有信息量。")
     body(document,
-         '首先排除工具问题：用一个微分方程模型生成数据、再用同一模型去拟合，'
-         '在 30 / 72 / 144 / 241 步四种窗口下拟合优度均为 **1.00000**，'
-         '说明拟合工具本身没有问题。')
+         "首先排除工具问题：用一个微分方程模型生成数据、再用同一模型去拟合，"
+         "在 30 / 72 / 144 / 241 步四种窗口下拟合优度均为 **1.00000**，"
+         "说明拟合工具本身没有问题。")
     body(document,
-         '但当同一个模型去拟合智能体仿真的家庭聚合轨迹时，拟合优度只有 **0.38 ~ 0.90**，'
-         '并且远低于智能体自身的随机波动所能解释的水平。这说明：'
-         '**差距来自模型结构与家庭动力学之间的不匹配，而不是机制效应。**')
+         "但当同一个模型去拟合智能体仿真的家庭聚合轨迹时，拟合优度只有 "
+         f"**{fmt(min(full_r2.values()), 2)} ~ {fmt(max(full_r2.values()), 2)}**"
+         f"（四种条件下分别为 " + "、".join(f"{v:.3f}" for v in full_r2.values()) + "）。"
+         "这说明：**差距来自模型结构与家庭动力学之间的不匹配，而不是机制效应。**")
     body(document,
-         '随后发现更根本的问题：这个指标本身不适合用来检验机制。'
-         '因为结构错配的贡献远大于机制效应（机制带来的轨迹偏离约 0.02，'
-         '而结构误差主导了拟合优度），机制效应被完全淹没。'
-         '这就是本研究改用「机制直接产生的可观测量」（E1–E4）的原因。')
+         "随后发现更根本的问题：这个指标本身不适合用来检验机制。"
+         "因为结构错配的贡献远大于机制效应（机制带来的轨迹偏离约 "
+         f"{fmt(max(cond['deviation']['mean_abs'] for cond in red['conditions'].values()), 3)}，"
+         "而结构误差主导了拟合优度），机制效应被完全淹没。"
+         "这就是本研究改用「机制直接产生的可观测量」（E1–E4）的原因。")
+
     body(document,
          '这个否定结果本身是一个结论：**含有时变影响系数的家庭动力学，'
          '不能被单一常系数微分方程刻画。** 任何试图用几个固定系数概括家庭过程的建模，'

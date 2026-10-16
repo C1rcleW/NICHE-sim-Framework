@@ -2,7 +2,10 @@
   "seeds": [
     1000,
     1001,
-    1002
+    1002,
+    1003,
+    1004,
+    1005
   ],
   "steps": 300,
   "runs": [],
@@ -238,10 +241,10 @@
       "shift": -3.0,
       "scale": 0.7,
       "ratios": [
-        0.9026554025081128,
-        0.2386499058495239,
-        0.007950094758046594,
-        0.0036432414748442414
+        0.9218692928162281,
+        0.51198593357169,
+        0.022255602014679896,
+        0.018548786958136474
       ],
       "stages": [
         "学前期",
@@ -250,9 +253,9 @@
         "成年早期"
       ],
       "openness": [
-        0.36599999999999994,
+        0.366,
         0.2751690140845074,
-        0.15239583333333281,
+        0.1523958333333328,
         0.10500000000000001
       ],
       "p2_decreasing": true,
@@ -262,10 +265,10 @@
       "shift": -3.0,
       "scale": 0.85,
       "ratios": [
-        0.9382118519204322,
-        0.2445178712711905,
-        0.008364422001705993,
-        0.0027365041956770083
+        0.9528756791617259,
+        0.5232140010098151,
+        0.02305684474460885,
+        0.01836411727397668
       ],
       "stages": [
         "学前期",
@@ -276,7 +279,7 @@
       "openness": [
         0.43799999999999994,
         0.3341338028169015,
-        0.18505208333333267,
+        0.18505208333333265,
         0.12749999999999997
       ],
       "p2_decreasing": true,
@@ -287,9 +290,9 @@
       "scale": 1.0,
       "ratios": [
         1.0,
-        0.2519024044906997,
-        0.008781233217306672,
-        0.0016910696562144297
+        0.531616286910534,
+        0.024028909845128486,
+        0.0177567948022245
       ],
       "stages": [
         "学前期",
@@ -310,10 +313,10 @@
       "shift": -3.0,
       "scale": 1.15,
       "ratios": [
-        1.0528411798292914,
-        0.2633405958310515,
-        0.009192002352967648,
-        0.0005644642346273832
+        1.056362542295353,
+        0.5409480834918519,
+        0.024945853541520718,
+        0.016953927688446304
       ],
       "stages": [
         "学前期",
@@ -322,7 +325,7 @@
         "成年早期"
       ],
       "openness": [
-        0.5819999999999999,
+        0.5820000000000001,
         0.4520633802816904,
         0.2503645833333324,
         0.17249999999999996
@@ -334,10 +337,10 @@
       "shift": -3.0,
       "scale": 1.3,
       "ratios": [
-        1.0972695918047883,
-        0.28580891880695014,
-        0.009598166546284244,
-        0.0005988291901658428
+        1.1140563760721598,
+        0.5694990200895937,
+        0.026127917500310273,
+        0.016156259140330934
       ],
       "stages": [
         "学前期",
@@ -349,7 +352,7 @@
         0.654,
         0.5110281690140847,
         0.28302083333333233,
-        0.195
+        0.19500000000000003
       ],
       "p2_decreasing": true,
       "p3_weaker_below_half": true
@@ -358,10 +361,10 @@
       "shift": -2.0,
       "scale": 0.7,
       "ratios": [
-        0.9092142176659685,
-        0.2406988702523731,
-        0.008091922649501758,
-        0.00364306834083361
+        0.9350132551091566,
+        0.5164449833235929,
+        0.02256155895426337,
+        0.018548289343328788
       ],
       "stages": [
         "学前期",
@@ -371,8 +374,8 @@
       ],
       "openness": [
         0.3887500000000001,
-        0.30119718309859167,
-        0.16756249999999945,
+        0.3011971830985917,
+        0.16756249999999942,
         0.10500000000000001
       ],
       "p2_decreasing": true,
@@ -382,10 +385,10 @@
       "shift": -2.0,
       "scale": 0.85,
       "ratios": [
-        0.9493744807111713,
-        0.2504192024987817,
-        0.008536896608892394,
-        0.002736489332587914
+        0.9733409523578641,
+        0.5270681319185629,
+        0.02335549407190625,
+        0.018364071006683354
       ],
       "stages": [
         "学前期",
@@ -406,10 +409,10 @@
       "shift": -2.0,
       "scale": 1.0,
       "ratios": [
-        1.0090519282456931,
-        0.26170352716140816,
-        0.008971865514322153,
-        0.0016910690251274612
+        1.0240723201465194,
+        0.5403469863221979,
+        0.02445029104505863,
+        0.01775679246440796
       ],
       "stages": [
         "学前期",
@@ -430,10 +433,10 @@
       "shift": -2.0,
       "scale": 1.15,
       "ratios": [
-        1.0588206205401125,
-        0.2815167456762765,
-        0.009533054810737353,
-        0.0005644642301604976
+        1.0824114680838863,
+        0.5558510364070598,
+        0.0257372063263017,
+        0.016953927650267327
       ],
       "stages": [
         "学前期",
@@ -454,10 +457,10 @@
       "shift": -2.0,
       "scale": 1.3,
       "ratios": [
-        1.1026901411470342,
-        0.3233674905879779,
-        0.010251391574271067,
-        0.0005988291890499335
+        1.1396379854467014,
+        0.5942393238333787,
+        0.02740988671027524,
+        0.01615625914204342
       ],
       "stages": [
         "学前期",
@@ -469,7 +472,7 @@
         0.6962500000000001,
         0.5593661971830983,
         0.31118749999999895,
-        0.195
+        0.19500000000000003
       ],
       "p2_decreasing": true,
       "p3_weaker_below_half": true
@@ -478,10 +481,10 @@
       "shift": 0.0,
       "scale": 0.7,
       "ratios": [
-        0.9882633175305124,
-        0.2589344900762992,
-        0.008594600772646784,
-        0.0011845358133089868
+        0.9913002803863071,
+        0.5324028031899883,
+        0.023618422591054507,
+        0.016851681759160977
       ],
       "stages": [
         "学前期",
@@ -490,9 +493,9 @@
         "成年早期"
       ],
       "openness": [
-        0.51475,
+        0.5147500000000002,
         0.3530399061032864,
-        0.20121354166666627,
+        0.20121354166666622,
         0.15429166666666597
       ],
       "p2_decreasing": true,
@@ -502,10 +505,10 @@
       "shift": 0.0,
       "scale": 0.85,
       "ratios": [
-        1.0602605501741313,
-        0.33069490414339026,
-        0.009158255873328944,
-        0.00047204337218121625
+        1.0638808261760668,
+        0.6133842396715123,
+        0.02494779529337442,
+        0.01573680129284844
       ],
       "stages": [
         "学前期",
@@ -526,10 +529,10 @@
       "shift": 0.0,
       "scale": 1.0,
       "ratios": [
-        1.182977431555025,
-        0.7341065974805877,
-        0.010167213968217329,
-        0.0021387234365637356
+        1.1393693820603692,
+        0.837908056464663,
+        0.026150510120953614,
+        0.015018581605682512
       ],
       "stages": [
         "学前期",
@@ -538,7 +541,7 @@
         "成年早期"
       ],
       "openness": [
-        0.7225000000000005,
+        0.7225000000000003,
         0.5043427230046947,
         0.2874479166666661,
         0.22041666666666562
@@ -550,10 +553,10 @@
       "shift": 0.0,
       "scale": 1.15,
       "ratios": [
-        1.490081114435806,
-        1.441256063866401,
-        0.032412032056172976,
-        0.0036682147361116755
+        1.2126492652225853,
+        1.7825752773584025,
+        0.03057533456044937,
+        0.015371931018714985
       ],
       "stages": [
         "学前期",
@@ -567,17 +570,17 @@
         0.330565104166666,
         0.25347916666666553
       ],
-      "p2_decreasing": true,
+      "p2_decreasing": false,
       "p3_weaker_below_half": true
     },
     {
       "shift": 0.0,
       "scale": 1.3,
       "ratios": [
-        2.6095041072892347,
-        1.5813704578404624,
-        0.05877751826626391,
-        0.00480677981087356
+        1.268883711225821,
+        5.632957307137013,
+        0.15422980024295802,
+        0.01769850822891089
       ],
       "stages": [
         "学前期",
@@ -586,22 +589,22 @@
         "成年早期"
       ],
       "openness": [
-        0.9302500000000005,
+        0.9302500000000004,
         0.6556455399061034,
         0.37368229166666594,
         0.2865416666666654
       ],
-      "p2_decreasing": true,
+      "p2_decreasing": false,
       "p3_weaker_below_half": true
     },
     {
       "shift": 2.0,
       "scale": 0.7,
       "ratios": [
-        1.0337676041532788,
-        0.26561921121777254,
-        0.009228428829232386,
-        0.0006507939096754878
+        1.0366477783006274,
+        0.5467530072458667,
+        0.025279028199108062,
+        0.016123849832483425
       ],
       "stages": [
         "学前期",
@@ -611,7 +614,7 @@
       ],
       "openness": [
         0.5690000000000001,
-        0.41038732394366245,
+        0.4103873239436625,
         0.25054166666666594,
         0.19599999999999998
       ],
@@ -622,10 +625,10 @@
       "shift": 2.0,
       "scale": 0.85,
       "ratios": [
-        1.1093745042261152,
-        0.3633638722190352,
-        0.01029606966848104,
-        0.0027913084411951396
+        1.127433494562456,
+        0.6770369217202958,
+        0.026928455382310885,
+        0.015311954218744329
       ],
       "stages": [
         "学前期",
@@ -646,10 +649,10 @@
       "shift": 2.0,
       "scale": 1.0,
       "ratios": [
-        1.3060124520890815,
-        1.0635350748001222,
-        0.2467715200450684,
-        0.004634107489294033
+        1.1965493080721834,
+        1.0951042814493284,
+        0.2722666965025331,
+        0.01650051499929681
       ],
       "stages": [
         "学前期",
@@ -659,7 +662,7 @@
       ],
       "openness": [
         0.8000000000000002,
-        0.5862676056338033,
+        0.5862676056338032,
         0.3579166666666657,
         0.2800000000000001
       ],
@@ -670,10 +673,10 @@
       "shift": 2.0,
       "scale": 1.15,
       "ratios": [
-        2.1490823583588448,
-        1.3810909930199036,
-        0.16352870454361756,
-        0.0056326092338564735
+        1.260596260448702,
+        2.7317749998881817,
+        0.13451179726638526,
+        0.021543800159859135
       ],
       "stages": [
         "学前期",
@@ -687,17 +690,17 @@
         0.4116041666666655,
         0.32199999999999995
       ],
-      "p2_decreasing": true,
+      "p2_decreasing": false,
       "p3_weaker_below_half": true
     },
     {
       "shift": 2.0,
       "scale": 1.3,
       "ratios": [
-        4.69552979407616,
-        2.715336489794216,
-        0.2114218990307589,
-        0.004790376939495562
+        3.434485953701723,
+        9.891085212334191,
+        1.2829514111248985,
+        0.03315180661469021
       ],
       "stages": [
         "学前期",
@@ -711,17 +714,17 @@
         0.4652916666666653,
         0.36400000000000005
       ],
-      "p2_decreasing": true,
-      "p3_weaker_below_half": true
+      "p2_decreasing": false,
+      "p3_weaker_below_half": false
     },
     {
       "shift": 3.0,
       "scale": 0.7,
       "ratios": [
-        1.0564803033192336,
-        0.2697858875711049,
-        0.009508167203214927,
-        0.0006507939096753288
+        1.0650447427733165,
+        0.5501622882652403,
+        0.025772047430914106,
+        0.016123849832483942
       ],
       "stages": [
         "学前期",
@@ -731,7 +734,7 @@
       ],
       "openness": [
         0.6026,
-        0.4431690140845074,
+        0.4431690140845075,
         0.27620833333333245,
         0.19599999999999998
       ],
@@ -742,10 +745,10 @@
       "shift": 3.0,
       "scale": 0.85,
       "ratios": [
-        1.1639534091640458,
-        0.37116642250151616,
-        0.010784905322545224,
-        0.002791308441195101
+        1.1555367815234223,
+        0.6845185165802883,
+        0.02834969172809782,
+        0.015311954218744473
       ],
       "stages": [
         "学前期",
@@ -754,8 +757,8 @@
         "成年早期"
       ],
       "openness": [
-        0.7253000000000001,
-        0.5381338028169014,
+        0.7253000000000002,
+        0.5381338028169016,
         0.3353958333333322,
         0.23800000000000002
       ],
@@ -766,10 +769,10 @@
       "shift": 3.0,
       "scale": 1.0,
       "ratios": [
-        1.4983828559615977,
-        1.0895389410307397,
-        0.42633978538661055,
-        0.004634107489294033
+        1.2258156013331987,
+        1.1132586131855766,
+        0.4467689238967425,
+        0.01650051499929681
       ],
       "stages": [
         "学前期",
@@ -790,10 +793,10 @@
       "shift": 3.0,
       "scale": 1.15,
       "ratios": [
-        3.2087426871587335,
-        1.5065942109368742,
-        0.23620933868736205,
-        0.005632609233721126
+        1.287765925224312,
+        3.401901550341792,
+        0.7303981033795336,
+        0.021543800159553216
       ],
       "stages": [
         "学前期",
@@ -807,17 +810,17 @@
         0.4537708333333319,
         0.32199999999999995
       ],
-      "p2_decreasing": true,
+      "p2_decreasing": false,
       "p3_weaker_below_half": true
     },
     {
       "shift": 3.0,
       "scale": 1.3,
       "ratios": [
-        4.761273701818066,
-        3.9824023767569146,
-        0.2953551954205391,
-        0.004790390226623518
+        3.422770188637843,
+        6.922643228433411,
+        0.9108960322875796,
+        0.03315176425245679
       ],
       "stages": [
         "学前期",
@@ -827,11 +830,11 @@
       ],
       "openness": [
         0.99,
-        0.8206572769953054,
+        0.8206572769953056,
         0.5129583333333316,
         0.36400000000000005
       ],
-      "p2_decreasing": true,
+      "p2_decreasing": false,
       "p3_weaker_below_half": true
     }
   ],
@@ -841,7 +844,7 @@
       "scale": 0.7,
       "monotone": true,
       "clean_upper_bound": 8.0,
-      "best_snr": 6.283177594573363,
+      "best_snr": 4.9600068697537205,
       "first_clamped_strength": null,
       "passed": true
     },
@@ -850,7 +853,7 @@
       "scale": 0.85,
       "monotone": true,
       "clean_upper_bound": 8.0,
-      "best_snr": 6.166699493789085,
+      "best_snr": 4.886105861170105,
       "first_clamped_strength": null,
       "passed": true
     },
@@ -859,7 +862,7 @@
       "scale": 1.0,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 6.069759030571125,
+      "best_snr": 4.822919729190312,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -868,7 +871,7 @@
       "scale": 1.15,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.987842034484286,
+      "best_snr": 4.768273116756845,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -877,7 +880,7 @@
       "scale": 1.3,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.917856550322387,
+      "best_snr": 4.720516529361403,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -886,7 +889,7 @@
       "scale": 0.7,
       "monotone": true,
       "clean_upper_bound": 8.0,
-      "best_snr": 6.099845279071651,
+      "best_snr": 4.871646683726842,
       "first_clamped_strength": null,
       "passed": true
     },
@@ -895,7 +898,7 @@
       "scale": 0.85,
       "monotone": true,
       "clean_upper_bound": 8.0,
-      "best_snr": 5.992751028710332,
+      "best_snr": 4.796247080647283,
       "first_clamped_strength": null,
       "passed": true
     },
@@ -904,7 +907,7 @@
       "scale": 1.0,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.904865383664241,
+      "best_snr": 4.733197347211282,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -913,7 +916,7 @@
       "scale": 1.15,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.831381236274989,
+      "best_snr": 4.679650413064389,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -922,7 +925,7 @@
       "scale": 1.3,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.769097546959639,
+      "best_snr": 4.633564175607689,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -931,7 +934,7 @@
       "scale": 0.7,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 6.021773439728517,
+      "best_snr": 4.725270976629599,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -940,7 +943,7 @@
       "scale": 0.85,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.92099811484114,
+      "best_snr": 4.660664196194647,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -949,7 +952,7 @@
       "scale": 1.0,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.837429805602555,
+      "best_snr": 4.60656713878319,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -958,7 +961,7 @@
       "scale": 1.15,
       "monotone": true,
       "clean_upper_bound": 2.0,
-      "best_snr": 5.767068905617166,
+      "best_snr": 4.560596254360622,
       "first_clamped_strength": 4.0,
       "passed": true
     },
@@ -967,7 +970,7 @@
       "scale": 1.3,
       "monotone": true,
       "clean_upper_bound": 2.0,
-      "best_snr": 5.706959679665132,
+      "best_snr": 4.521058249644537,
       "first_clamped_strength": 4.0,
       "passed": true
     },
@@ -976,7 +979,7 @@
       "scale": 0.7,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.903193965498298,
+      "best_snr": 4.68324560671863,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -985,7 +988,7 @@
       "scale": 0.85,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.8091295325712435,
+      "best_snr": 4.620538585820589,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -994,7 +997,7 @@
       "scale": 1.0,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.733250425136739,
+      "best_snr": 4.568646719392179,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -1003,7 +1006,7 @@
       "scale": 1.15,
       "monotone": true,
       "clean_upper_bound": 2.0,
-      "best_snr": 5.670385469255137,
+      "best_snr": 4.524927410556001,
       "first_clamped_strength": 4.0,
       "passed": true
     },
@@ -1012,7 +1015,7 @@
       "scale": 1.3,
       "monotone": true,
       "clean_upper_bound": 2.0,
-      "best_snr": 5.629579582340304,
+      "best_snr": 4.505111349389026,
       "first_clamped_strength": 4.0,
       "passed": true
     },
@@ -1021,7 +1024,7 @@
       "scale": 0.7,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.895330999683946,
+      "best_snr": 4.698544096165921,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -1030,7 +1033,7 @@
       "scale": 0.85,
       "monotone": true,
       "clean_upper_bound": 4.0,
-      "best_snr": 5.79598196855655,
+      "best_snr": 4.628475253618176,
       "first_clamped_strength": 8.0,
       "passed": true
     },
@@ -1039,7 +1042,7 @@
       "scale": 1.0,
       "monotone": true,
       "clean_upper_bound": 2.0,
-      "best_snr": 5.717164565718853,
+      "best_snr": 4.5714121011012905,
       "first_clamped_strength": 4.0,
       "passed": true
     },
@@ -1048,7 +1051,7 @@
       "scale": 1.15,
       "monotone": true,
       "clean_upper_bound": 2.0,
-      "best_snr": 5.655841861991072,
+      "best_snr": 4.529051714925776,
       "first_clamped_strength": 4.0,
       "passed": true
     },
@@ -1057,7 +1060,7 @@
       "scale": 1.3,
       "monotone": true,
       "clean_upper_bound": 2.0,
-      "best_snr": 5.611731490270071,
+      "best_snr": 4.510931622701165,
       "first_clamped_strength": 4.0,
       "passed": true
     }
@@ -1067,690 +1070,690 @@
       "shift": -3.0,
       "scale": 0.7,
       "strength": 1.0,
-      "childhood_snr": 5.951135979783094,
-      "adulthood_snr": 4.74623616901104,
-      "decay_ratio": 0.06638242673767564,
+      "childhood_snr": 4.779715014757597,
+      "adulthood_snr": 3.366549176352016,
+      "decay_ratio": 0.05896823478788283,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 0.7,
       "strength": 2.0,
-      "childhood_snr": 5.58268581545925,
-      "adulthood_snr": 4.797792501179217,
-      "decay_ratio": 0.06974998033900043,
+      "childhood_snr": 4.5415986922886145,
+      "adulthood_snr": 3.0768643649714615,
+      "decay_ratio": 0.061215698023715466,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 0.7,
       "strength": 4.0,
-      "childhood_snr": 5.314795855516817,
-      "adulthood_snr": 4.587105512580631,
-      "decay_ratio": 0.07177399970833054,
+      "childhood_snr": 4.3439382883907935,
+      "adulthood_snr": 2.9858105100883736,
+      "decay_ratio": 0.06372893294501779,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 0.85,
       "strength": 1.0,
-      "childhood_snr": 5.837227921483422,
-      "adulthood_snr": 4.78711689866406,
-      "decay_ratio": 0.06741586906541738,
+      "childhood_snr": 4.70946962086113,
+      "adulthood_snr": 3.2734032390525343,
+      "decay_ratio": 0.05960042215371284,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 0.85,
       "strength": 2.0,
-      "childhood_snr": 5.498915793755291,
-      "adulthood_snr": 4.750395846873838,
-      "decay_ratio": 0.0704877958836515,
+      "childhood_snr": 4.482373554412517,
+      "adulthood_snr": 3.0260378680887277,
+      "decay_ratio": 0.06188205956711105,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 0.85,
       "strength": 4.0,
-      "childhood_snr": 5.246553021568506,
-      "adulthood_snr": 4.553210036918238,
-      "decay_ratio": 0.07192697538130703,
+      "childhood_snr": 4.291576562943947,
+      "adulthood_snr": 3.0055094257655584,
+      "decay_ratio": 0.06439801526295037,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.0,
       "strength": 1.0,
-      "childhood_snr": 5.74814956233942,
-      "adulthood_snr": 4.810004679228932,
-      "decay_ratio": 0.0682357072223383,
+      "childhood_snr": 4.652514627760424,
+      "adulthood_snr": 3.2012041121950854,
+      "decay_ratio": 0.060122376597796116,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.0,
       "strength": 2.0,
-      "childhood_snr": 5.434883487648146,
-      "adulthood_snr": 4.695868428286642,
-      "decay_ratio": 0.07101540535741568,
+      "childhood_snr": 4.4354250171491065,
+      "adulthood_snr": 2.9979979808110215,
+      "decay_ratio": 0.06246960654658807,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.0,
       "strength": 4.0,
-      "childhood_snr": 5.1836339616988285,
-      "adulthood_snr": 4.545802176370416,
-      "decay_ratio": 0.07183062155344085,
+      "childhood_snr": 4.243456474874164,
+      "adulthood_snr": 3.0333301828593604,
+      "decay_ratio": 0.06485341698872159,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.15,
       "strength": 1.0,
-      "childhood_snr": 5.676282073011617,
-      "adulthood_snr": 4.816001085653777,
-      "decay_ratio": 0.06889773192408294,
+      "childhood_snr": 4.6052117468261775,
+      "adulthood_snr": 3.144798230540145,
+      "decay_ratio": 0.06057125071622191,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.15,
       "strength": 2.0,
-      "childhood_snr": 5.383576076645252,
-      "adulthood_snr": 4.646432055447669,
-      "decay_ratio": 0.07139243160202748,
+      "childhood_snr": 4.396710602929018,
+      "adulthood_snr": 2.9853612408869448,
+      "decay_ratio": 0.06299238551428277,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.15,
       "strength": 4.0,
-      "childhood_snr": 5.10864643293241,
-      "adulthood_snr": 4.547613027056644,
-      "decay_ratio": 0.07154731578447109,
+      "childhood_snr": 4.191727519243557,
+      "adulthood_snr": 3.061532940559506,
+      "decay_ratio": 0.06513175429545165,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.3,
       "strength": 1.0,
-      "childhood_snr": 5.616903611628875,
-      "adulthood_snr": 4.808440669108571,
-      "decay_ratio": 0.06944056778518766,
+      "childhood_snr": 4.5651415922599226,
+      "adulthood_snr": 3.100697285187523,
+      "decay_ratio": 0.06097017014747598,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.3,
       "strength": 2.0,
-      "childhood_snr": 5.340539430020667,
-      "adulthood_snr": 4.607116795645538,
-      "decay_ratio": 0.07165342865702519,
+      "childhood_snr": 4.3636795337074155,
+      "adulthood_snr": 2.9831846135784152,
+      "decay_ratio": 0.06345426509054933,
       "passed": true
     },
     {
       "shift": -3.0,
       "scale": 1.3,
       "strength": 4.0,
-      "childhood_snr": 5.022872385220708,
-      "adulthood_snr": 4.543675167511156,
-      "decay_ratio": 0.07112604633353771,
+      "childhood_snr": 4.126915876070315,
+      "adulthood_snr": 3.0855668402540943,
+      "decay_ratio": 0.0652771587645566,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 0.7,
       "strength": 1.0,
-      "childhood_snr": 5.797034679718413,
-      "adulthood_snr": 4.713974502826518,
-      "decay_ratio": 0.06495215900271692,
+      "childhood_snr": 4.684532054633478,
+      "adulthood_snr": 3.3708326280090106,
+      "decay_ratio": 0.057609849110180245,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 0.7,
       "strength": 2.0,
-      "childhood_snr": 5.474429890241477,
-      "adulthood_snr": 4.795207993556757,
-      "decay_ratio": 0.06864312698128079,
+      "childhood_snr": 4.468228123079565,
+      "adulthood_snr": 3.0772826708379433,
+      "decay_ratio": 0.060167907039693914,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 0.7,
       "strength": 4.0,
-      "childhood_snr": 5.246333691975927,
-      "adulthood_snr": 4.5871025418481395,
-      "decay_ratio": 0.07110513593715077,
+      "childhood_snr": 4.295164455038408,
+      "adulthood_snr": 2.985816861777605,
+      "decay_ratio": 0.0630872915814792,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 0.85,
       "strength": 1.0,
-      "childhood_snr": 5.6961245197281425,
-      "adulthood_snr": 4.767011021605648,
-      "decay_ratio": 0.06603991475535742,
+      "childhood_snr": 4.618988364959144,
+      "adulthood_snr": 3.275776754111865,
+      "decay_ratio": 0.05829442962731621,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 0.85,
       "strength": 2.0,
-      "childhood_snr": 5.402833290796127,
-      "adulthood_snr": 4.7496751298727515,
-      "decay_ratio": 0.069509350370091,
+      "childhood_snr": 4.416578680262849,
+      "adulthood_snr": 3.0262242309027148,
+      "decay_ratio": 0.060955107332161446,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 0.85,
       "strength": 4.0,
-      "childhood_snr": 5.185846980363132,
-      "adulthood_snr": 4.553209904976824,
-      "decay_ratio": 0.07135983153360803,
+      "childhood_snr": 4.245840892932049,
+      "adulthood_snr": 3.005510012472552,
+      "decay_ratio": 0.0638490924028721,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.0,
       "strength": 1.0,
-      "childhood_snr": 5.61790492510162,
-      "adulthood_snr": 4.798002406149026,
-      "decay_ratio": 0.06693093876053,
+      "childhood_snr": 4.566966309181995,
+      "adulthood_snr": 3.202600808831839,
+      "decay_ratio": 0.05888521003396698,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.0,
       "strength": 2.0,
-      "childhood_snr": 5.348525212838996,
-      "adulthood_snr": 4.695686140968245,
-      "decay_ratio": 0.07014374008251262,
+      "childhood_snr": 4.375852328459446,
+      "adulthood_snr": 2.998079980496915,
+      "decay_ratio": 0.06164190395490622,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.0,
       "strength": 4.0,
-      "childhood_snr": 5.126636589216568,
-      "adulthood_snr": 4.545802178022367,
-      "decay_ratio": 0.07133989101015684,
+      "childhood_snr": 4.195884208613057,
+      "adulthood_snr": 3.033330229646608,
+      "decay_ratio": 0.06437417731012302,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.15,
       "strength": 1.0,
-      "childhood_snr": 5.55527189269295,
-      "adulthood_snr": 4.809083682326276,
-      "decay_ratio": 0.0676688315667053,
+      "childhood_snr": 4.524472329597577,
+      "adulthood_snr": 3.1456611788747355,
+      "decay_ratio": 0.059407089344242825,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.15,
       "strength": 2.0,
-      "childhood_snr": 5.305107082816144,
-      "adulthood_snr": 4.64639024507434,
-      "decay_ratio": 0.07060875344731003,
+      "childhood_snr": 4.34212123846226,
+      "adulthood_snr": 2.9853951200494264,
+      "decay_ratio": 0.062245724712847804,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.15,
       "strength": 4.0,
-      "childhood_snr": 5.051531887924002,
-      "adulthood_snr": 4.547613032553852,
-      "decay_ratio": 0.07111624748761622,
+      "childhood_snr": 4.133631365237773,
+      "adulthood_snr": 3.0615329496654433,
+      "decay_ratio": 0.06470699213096429,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.3,
       "strength": 1.0,
-      "childhood_snr": 5.503882699812619,
-      "adulthood_snr": 4.804573346464395,
-      "decay_ratio": 0.06828621526154892,
+      "childhood_snr": 4.488934417198957,
+      "adulthood_snr": 3.101251059364793,
+      "decay_ratio": 0.059877259210208214,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.3,
       "strength": 2.0,
-      "childhood_snr": 5.268493715248194,
-      "adulthood_snr": 4.60710805742133,
-      "decay_ratio": 0.0709426690979258,
+      "childhood_snr": 4.31293831271836,
+      "adulthood_snr": 2.9831974377211514,
+      "decay_ratio": 0.06277437352865553,
       "passed": true
     },
     {
       "shift": -2.0,
       "scale": 1.3,
       "strength": 4.0,
-      "childhood_snr": 4.954176335428238,
-      "adulthood_snr": 4.543675169475269,
-      "decay_ratio": 0.07074286082053051,
+      "childhood_snr": 4.023451428118656,
+      "adulthood_snr": 3.0855668432610726,
+      "decay_ratio": 0.06489613519602225,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 0.7,
       "strength": 1.0,
-      "childhood_snr": 5.726354862234736,
-      "adulthood_snr": 4.856415165675136,
-      "decay_ratio": 0.07217166109826467,
+      "childhood_snr": 4.594930121938787,
+      "adulthood_snr": 3.1631275464174617,
+      "decay_ratio": 0.0633900587223183,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 0.7,
       "strength": 2.0,
-      "childhood_snr": 5.422673706139208,
-      "adulthood_snr": 4.6775373062674,
-      "decay_ratio": 0.07289435095730172,
+      "childhood_snr": 4.405064957288696,
+      "adulthood_snr": 2.9792206906051555,
+      "decay_ratio": 0.0641031017139947,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 0.7,
       "strength": 4.0,
-      "childhood_snr": 5.186654472784452,
-      "adulthood_snr": 4.544696801116176,
-      "decay_ratio": 0.07257355367898607,
+      "childhood_snr": 4.235132759532372,
+      "adulthood_snr": 3.0382306643532138,
+      "decay_ratio": 0.06564608716858245,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 0.85,
       "strength": 1.0,
-      "childhood_snr": 5.630709544564405,
-      "adulthood_snr": 4.843964108440958,
-      "decay_ratio": 0.07238216517719459,
+      "childhood_snr": 4.538015365784087,
+      "adulthood_snr": 3.089530582717616,
+      "decay_ratio": 0.06342946062076062,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 0.85,
       "strength": 2.0,
-      "childhood_snr": 5.35480273672405,
-      "adulthood_snr": 4.605849601147245,
-      "decay_ratio": 0.07301608227134056,
+      "childhood_snr": 4.358162873063706,
+      "adulthood_snr": 2.972635573790669,
+      "decay_ratio": 0.06455961537419766,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 0.85,
       "strength": 4.0,
-      "childhood_snr": 5.098326458337268,
-      "adulthood_snr": 4.549499701712193,
-      "decay_ratio": 0.07188360879065334,
+      "childhood_snr": 4.153572716108329,
+      "adulthood_snr": 3.078709430199312,
+      "decay_ratio": 0.06580509631367462,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.0,
       "strength": 1.0,
-      "childhood_snr": 5.557038812334717,
-      "adulthood_snr": 4.805609062387696,
-      "decay_ratio": 0.07255967802630096,
+      "childhood_snr": 4.492529557186364,
+      "adulthood_snr": 3.0398290156401817,
+      "decay_ratio": 0.06355516131633068,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.0,
       "strength": 2.0,
-      "childhood_snr": 5.301592205556226,
-      "adulthood_snr": 4.564000309055395,
-      "decay_ratio": 0.07302744264736725,
+      "childhood_snr": 4.3199616888440895,
+      "adulthood_snr": 2.982640520454261,
+      "decay_ratio": 0.06496746546616157,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.0,
       "strength": 4.0,
-      "childhood_snr": 4.881179763360925,
-      "adulthood_snr": 4.51922606201032,
-      "decay_ratio": 0.07101169033291019,
+      "childhood_snr": 3.5952398627228606,
+      "adulthood_snr": 3.1045480337709703,
+      "decay_ratio": 0.06579371511837948,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.15,
       "strength": 1.0,
-      "childhood_snr": 5.498351441004652,
-      "adulthood_snr": 4.756954666035032,
-      "decay_ratio": 0.07270824309897785,
+      "childhood_snr": 4.455116834405401,
+      "adulthood_snr": 3.007297751166502,
+      "decay_ratio": 0.06373695694003101,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.15,
       "strength": 2.0,
-      "childhood_snr": 5.255994425567257,
-      "adulthood_snr": 4.545751678714204,
-      "decay_ratio": 0.07293372834611983,
+      "childhood_snr": 4.286748459040306,
+      "adulthood_snr": 3.001120582964074,
+      "decay_ratio": 0.06529447165555462,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.15,
       "strength": 4.0,
-      "childhood_snr": 1.770864401362859,
-      "adulthood_snr": 4.429705767958621,
-      "decay_ratio": 0.06847917357457653,
+      "childhood_snr": 1.4751067574501964,
+      "adulthood_snr": 3.1109269072156835,
+      "decay_ratio": 0.06475083231068336,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.3,
       "strength": 1.0,
-      "childhood_snr": 5.450285950961818,
-      "adulthood_snr": 4.707816033189436,
-      "decay_ratio": 0.0728290992460284,
+      "childhood_snr": 4.42358202864208,
+      "adulthood_snr": 2.9872856822375566,
+      "decay_ratio": 0.06395124703090191,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.3,
       "strength": 2.0,
-      "childhood_snr": 5.213912684779528,
-      "adulthood_snr": 4.542531031444151,
-      "decay_ratio": 0.07274526303324318,
+      "childhood_snr": 4.255796649441137,
+      "adulthood_snr": 3.02315690172158,
+      "decay_ratio": 0.06553321380614714,
       "passed": true
     },
     {
       "shift": 0.0,
       "scale": 1.3,
       "strength": 4.0,
-      "childhood_snr": 1.3384508605596293,
-      "adulthood_snr": 4.2835931345490375,
-      "decay_ratio": 0.06621056422749626,
+      "childhood_snr": 1.1201283321196573,
+      "adulthood_snr": 3.0986016446182396,
+      "decay_ratio": 0.06207414562487822,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 0.7,
       "strength": 1.0,
-      "childhood_snr": 5.637912684895967,
-      "adulthood_snr": 4.80787123319995,
-      "decay_ratio": 0.07250617594443627,
+      "childhood_snr": 4.567198056371442,
+      "adulthood_snr": 3.0989428931734926,
+      "decay_ratio": 0.06378099681379495,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 0.7,
       "strength": 2.0,
-      "childhood_snr": 5.372648465619209,
-      "adulthood_snr": 4.605629506492475,
-      "decay_ratio": 0.07340038198044249,
+      "childhood_snr": 4.383337001121872,
+      "adulthood_snr": 2.983272187483695,
+      "decay_ratio": 0.06509957039204195,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 0.7,
       "strength": 4.0,
-      "childhood_snr": 5.121867124270686,
-      "adulthood_snr": 4.543168521033265,
-      "decay_ratio": 0.07201467745272706,
+      "childhood_snr": 4.195146389985527,
+      "adulthood_snr": 3.0864894181961064,
+      "decay_ratio": 0.06616985717155946,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 0.85,
       "strength": 1.0,
-      "childhood_snr": 5.555460323951554,
-      "adulthood_snr": 4.7701128927630565,
-      "decay_ratio": 0.07286365140336853,
+      "childhood_snr": 4.512911700190441,
+      "adulthood_snr": 3.042046587156734,
+      "decay_ratio": 0.06405775475870047,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 0.85,
       "strength": 2.0,
-      "childhood_snr": 5.309624012929521,
-      "adulthood_snr": 4.561955456998128,
-      "decay_ratio": 0.07336538949751746,
+      "childhood_snr": 4.335748669206714,
+      "adulthood_snr": 2.996542149873129,
+      "decay_ratio": 0.06555463010443514,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 0.85,
       "strength": 4.0,
-      "childhood_snr": 4.968531573696095,
-      "adulthood_snr": 4.480904878859243,
-      "decay_ratio": 0.07082048517533131,
+      "childhood_snr": 4.06847007106204,
+      "adulthood_snr": 3.1107270472080777,
+      "decay_ratio": 0.06608925995308906,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.0,
       "strength": 1.0,
-      "childhood_snr": 5.4916059188823585,
-      "adulthood_snr": 4.719994527676634,
-      "decay_ratio": 0.07310863527503975,
+      "childhood_snr": 4.469169335173552,
+      "adulthood_snr": 3.0081888288028225,
+      "decay_ratio": 0.06434821497611935,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.0,
       "strength": 2.0,
-      "childhood_snr": 5.2559463618213815,
-      "adulthood_snr": 4.546960356615277,
-      "decay_ratio": 0.0731599680232813,
+      "childhood_snr": 4.295533452117673,
+      "adulthood_snr": 3.0205552577524877,
+      "decay_ratio": 0.0658777965077772,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.0,
       "strength": 4.0,
-      "childhood_snr": 4.71070272103727,
-      "adulthood_snr": 4.323458557995385,
-      "decay_ratio": 0.05505154079488139,
+      "childhood_snr": 1.627586375170774,
+      "adulthood_snr": 3.1033005566172793,
+      "decay_ratio": 0.06455207902753486,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.15,
       "strength": 1.0,
-      "childhood_snr": 5.440217717305751,
-      "adulthood_snr": 4.670624722102891,
-      "decay_ratio": 0.07327128372572093,
+      "childhood_snr": 4.432799348973772,
+      "adulthood_snr": 2.9902457054607807,
+      "decay_ratio": 0.06464072104140493,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.15,
       "strength": 2.0,
-      "childhood_snr": 5.2059576396528735,
-      "adulthood_snr": 4.5465357261293375,
-      "decay_ratio": 0.07281603854977187,
+      "childhood_snr": 4.258719540626364,
+      "adulthood_snr": 3.0474057913840515,
+      "decay_ratio": 0.06607185058806198,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.15,
       "strength": 4.0,
-      "childhood_snr": 0.9574649045102898,
-      "adulthood_snr": 4.0976535978904725,
-      "decay_ratio": 0.06264460132567709,
+      "childhood_snr": 0.8104238316911021,
+      "adulthood_snr": 3.069723474506668,
+      "decay_ratio": 0.06146746557817313,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.3,
       "strength": 1.0,
-      "childhood_snr": 5.405396675754268,
-      "adulthood_snr": 4.628476984878619,
-      "decay_ratio": 0.07342761071839247,
+      "childhood_snr": 4.412600358576826,
+      "adulthood_snr": 2.9833916894133083,
+      "decay_ratio": 0.06497168502270637,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.3,
       "strength": 2.0,
-      "childhood_snr": 5.161454510654264,
-      "adulthood_snr": 4.547406617699491,
-      "decay_ratio": 0.07239704582626255,
+      "childhood_snr": 4.227796759076274,
+      "adulthood_snr": 3.072380588645066,
+      "decay_ratio": 0.06618672315919454,
       "passed": true
     },
     {
       "shift": 2.0,
       "scale": 1.3,
       "strength": 4.0,
-      "childhood_snr": 0.6856449552072903,
-      "adulthood_snr": 3.8691080580202954,
-      "decay_ratio": 0.06048917685202718,
+      "childhood_snr": 0.8476175821974551,
+      "adulthood_snr": 3.025766827739508,
+      "decay_ratio": 0.043601366384884224,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 0.7,
       "strength": 1.0,
-      "childhood_snr": 5.615950728912168,
-      "adulthood_snr": 4.807853701589058,
-      "decay_ratio": 0.07105072410315659,
+      "childhood_snr": 4.559223724064578,
+      "adulthood_snr": 3.0989775079128776,
+      "decay_ratio": 0.062415383840476686,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 0.7,
       "strength": 2.0,
-      "childhood_snr": 5.350451005771652,
-      "adulthood_snr": 4.605629504783464,
-      "decay_ratio": 0.07256477766331862,
+      "childhood_snr": 4.367728816349637,
+      "adulthood_snr": 2.983272204552885,
+      "decay_ratio": 0.06429877638908836,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 0.7,
       "strength": 4.0,
-      "childhood_snr": 5.070545381414493,
-      "adulthood_snr": 4.54316852103752,
-      "decay_ratio": 0.0715756924123885,
+      "childhood_snr": 4.160669504679596,
+      "adulthood_snr": 3.0864894181976594,
+      "decay_ratio": 0.0657307352075423,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 0.85,
       "strength": 1.0,
-      "childhood_snr": 5.532843992777874,
-      "adulthood_snr": 4.7701083699271996,
-      "decay_ratio": 0.07160553152721474,
+      "childhood_snr": 4.501735374529432,
+      "adulthood_snr": 3.04205312433052,
+      "decay_ratio": 0.06287313966149684,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 0.85,
       "strength": 2.0,
-      "childhood_snr": 5.2875340414619245,
-      "adulthood_snr": 4.561955459087097,
-      "decay_ratio": 0.07266124971151008,
+      "childhood_snr": 4.319009336683177,
+      "adulthood_snr": 2.9965421512775263,
+      "decay_ratio": 0.06487292079021287,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 0.85,
       "strength": 4.0,
-      "childhood_snr": 4.871715593298966,
-      "adulthood_snr": 4.480904878859297,
-      "decay_ratio": 0.07046030204934697,
+      "childhood_snr": 3.995592590560831,
+      "adulthood_snr": 3.110727047208114,
+      "decay_ratio": 0.06572304018089925,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.0,
       "strength": 1.0,
-      "childhood_snr": 5.468881121709114,
-      "adulthood_snr": 4.719993565004256,
-      "decay_ratio": 0.07200188036713717,
+      "childhood_snr": 4.456049997065726,
+      "adulthood_snr": 3.0081900964959694,
+      "decay_ratio": 0.06330160651849298,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.0,
       "strength": 2.0,
-      "childhood_snr": 5.233331785765576,
-      "adulthood_snr": 4.546960357102171,
-      "decay_ratio": 0.07255299685705413,
+      "childhood_snr": 4.277214362950945,
+      "adulthood_snr": 3.020555257973114,
+      "decay_ratio": 0.06528445860749447,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.0,
       "strength": 4.0,
-      "childhood_snr": 5.547871882968171,
-      "adulthood_snr": 4.323458557995385,
-      "decay_ratio": 0.046184369035110716,
+      "childhood_snr": 1.1583953619838543,
+      "adulthood_snr": 3.1033005566172793,
+      "decay_ratio": 0.061735596207758134,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.15,
       "strength": 1.0,
-      "childhood_snr": 5.419900387220891,
-      "adulthood_snr": 4.670624545378567,
-      "decay_ratio": 0.07229152489906265,
+      "childhood_snr": 4.42199015473111,
+      "adulthood_snr": 2.9902459511335637,
+      "decay_ratio": 0.06370717653309876,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.15,
       "strength": 2.0,
-      "childhood_snr": 5.180010029141867,
-      "adulthood_snr": 4.546535726222332,
-      "decay_ratio": 0.07228879036733618,
+      "childhood_snr": 4.239324306708197,
+      "adulthood_snr": 3.047405791420626,
+      "decay_ratio": 0.06555008903465553,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.15,
       "strength": 4.0,
-      "childhood_snr": 0.7693931861530081,
-      "adulthood_snr": 4.0976535978829975,
-      "decay_ratio": 0.05982959964916679,
+      "childhood_snr": 0.6493189346571322,
+      "adulthood_snr": 3.069723474500604,
+      "decay_ratio": 0.0571417364943667,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.3,
       "strength": 1.0,
-      "childhood_snr": 5.385070319913584,
-      "adulthood_snr": 4.6284769622771345,
-      "decay_ratio": 0.07263708946116933,
+      "childhood_snr": 4.403398616406336,
+      "adulthood_snr": 2.9833917375865084,
+      "decay_ratio": 0.06420620348470428,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.3,
       "strength": 2.0,
-      "childhood_snr": 5.123970703768807,
-      "adulthood_snr": 4.547406617714898,
-      "decay_ratio": 0.0719791878377899,
+      "childhood_snr": 4.204297438638752,
+      "adulthood_snr": 3.0723805886507436,
+      "decay_ratio": 0.0657645383080169,
       "passed": true
     },
     {
       "shift": 3.0,
       "scale": 1.3,
       "strength": 4.0,
-      "childhood_snr": 0.5017148838383751,
-      "adulthood_snr": 3.8691086893701683,
-      "decay_ratio": 0.05811086430927161,
+      "childhood_snr": 0.45113378274114496,
+      "adulthood_snr": 3.0257661738512254,
+      "decay_ratio": 0.054904941097113615,
       "passed": true
     }
   ],
   "summary": {
     "robustness": {
       "p1_all_pass": true,
-      "p2_all_pass": true,
-      "p3_all_pass": true,
+      "p2_all_pass": false,
+      "p3_all_pass": false,
       "p4_all_pass": true,
       "p5_pass_rate": 1.0
     },
     "tallies": {
       "P1 易感性阶梯单调且连续": "25/25",
-      "P2 效力比随阶段单调递减": "25/25",
-      "P3 易感性<0.5 阶段影响更弱": "25/25",
+      "P2 效力比随阶段单调递减": "19/25",
+      "P3 易感性<0.5 阶段影响更弱": "24/25",
       "P4 剂量-反应单调且信噪比>2": "25/25",
       "P5 成年后留痕": "75/75"
     },
@@ -1767,11 +1770,11 @@
     },
     {
       "claim": "P2 在全部 25 个参数组合下成立",
-      "robust": true
+      "robust": false
     },
     {
       "claim": "P3 在全部 25 个参数组合下成立",
-      "robust": true
+      "robust": false
     },
     {
       "claim": "P4 在全部 25 个参数组合下成立",

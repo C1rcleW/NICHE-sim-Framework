@@ -31,18 +31,18 @@
       },
       "reducibility": {
         "full": {
-          "r_squared": 0.765218,
+          "r_squared": 0.768115,
           "converged": true,
           "n": 241
         },
         "stages": {
           "A 青春期(12-20岁)": {
-            "r_squared": 0.904679,
+            "r_squared": 0.906425,
             "converged": true,
             "n": 96
           },
           "B 成年后(20-32岁)": {
-            "r_squared": 0.655049,
+            "r_squared": 0.783832,
             "converged": true,
             "n": 144
           }
@@ -52,15 +52,15 @@
         {
           "state": "state_happiness",
           "first": 0.16533437442389107,
-          "last": 0.09894130449381246,
-          "slope": -0.0002017223783901742,
+          "last": 0.09889315963808126,
+          "slope": -0.0002002623170860579,
           "direction": "converging"
         },
         {
           "state": "state_stress",
           "first": 0.354014721644688,
-          "last": 0.10003130398484648,
-          "slope": -0.0005650150112821056,
+          "last": 0.09965638272879085,
+          "slope": -0.0005585427772312542,
           "direction": "converging"
         }
       ]
@@ -73,41 +73,41 @@
         "role_switch": 0.0
       },
       "deviation": {
-        "mean_abs": 0.02591385571763652,
-        "max_abs": 0.07617211065535767,
-        "normalized": 0.05889038455577505
+        "mean_abs": 0.025931660280232277,
+        "max_abs": 0.07574016390694938,
+        "normalized": 0.058897308297036356
       },
       "influence": {
         "overall": {
           "mean_openness": 0.4990430497925311,
           "std_openness": 0.0202547274443255,
-          "mean_received": 0.0057470787910074705
+          "mean_received": 0.005699151777956886
         },
         "window_a": {
           "mean_openness": 0.49759765624999996,
           "std_openness": 0.03205057679648353,
-          "mean_received": 0.00638030637252221
+          "mean_received": 0.006303322866681567
         },
         "window_b": {
           "mean_openness": 0.5,
           "std_openness": 0.0,
-          "mean_received": 0.005327406901585555
+          "mean_received": 0.005298765302845391
         }
       },
       "reducibility": {
         "full": {
-          "r_squared": 0.67407,
+          "r_squared": 0.51452,
           "converged": true,
           "n": 241
         },
         "stages": {
           "A 青春期(12-20岁)": {
-            "r_squared": 0.92692,
+            "r_squared": 0.925291,
             "converged": true,
             "n": 96
           },
           "B 成年后(20-32岁)": {
-            "r_squared": 0.723762,
+            "r_squared": 0.181971,
             "converged": true,
             "n": 144
           }
@@ -117,15 +117,15 @@
         {
           "state": "state_happiness",
           "first": 0.16533437442389107,
-          "last": 0.03287947393002923,
-          "slope": 3.2552806384151845e-05,
+          "last": 0.03212272999535287,
+          "slope": 3.367188994956335e-05,
           "direction": "diverging"
         },
         {
           "state": "state_stress",
           "first": 0.354014721644688,
-          "last": 0.10003130398484648,
-          "slope": -0.0005650150112821056,
+          "last": 0.09965638272879085,
+          "slope": -0.0005585427772312542,
           "direction": "converging"
         }
       ]
@@ -138,41 +138,41 @@
         "role_switch": 0.0
       },
       "deviation": {
-        "mean_abs": 0.020453971359698956,
-        "max_abs": 0.05283467616255766,
-        "normalized": 0.04648255559459992
+        "mean_abs": 0.02043322162182635,
+        "max_abs": 0.052920616708646784,
+        "normalized": 0.046408974217504124
       },
       "influence": {
         "overall": {
           "mean_openness": 0.15804330912863063,
           "std_openness": 0.11211801926451459,
-          "mean_received": 0.0032377011825489377
+          "mean_received": 0.0032255575466193934
         },
         "window_a": {
           "mean_openness": 0.20386501736111096,
           "std_openness": 0.15675495870157105,
-          "mean_received": 0.004174471149422024
+          "mean_received": 0.00415246669604443
         },
         "window_b": {
           "mean_openness": 0.12776837384259254,
           "std_openness": 0.04835251898573576,
-          "mean_received": 0.0026177584758061614
+          "mean_received": 0.0026120457623916423
         }
       },
       "reducibility": {
         "full": {
-          "r_squared": 0.377988,
+          "r_squared": 0.383031,
           "converged": true,
           "n": 241
         },
         "stages": {
           "A 青春期(12-20岁)": {
-            "r_squared": 0.94398,
+            "r_squared": 0.941531,
             "converged": true,
             "n": 96
           },
           "B 成年后(20-32岁)": {
-            "r_squared": 0.748496,
+            "r_squared": 0.300057,
             "converged": true,
             "n": 144
           }
@@ -182,15 +182,15 @@
         {
           "state": "state_happiness",
           "first": 0.16533437442389107,
-          "last": 0.05512473503692921,
-          "slope": 6.421351651064937e-05,
+          "last": 0.05432495520548133,
+          "slope": 6.652443579007855e-05,
           "direction": "diverging"
         },
         {
           "state": "state_stress",
           "first": 0.354014721644688,
-          "last": 0.10003130398484648,
-          "slope": -0.0005650150112821056,
+          "last": 0.09965638272879085,
+          "slope": -0.0005585427772312542,
           "direction": "converging"
         }
       ]
@@ -203,41 +203,41 @@
         "role_switch": 1.0
       },
       "deviation": {
-        "mean_abs": 0.017046235927424297,
-        "max_abs": 0.04640837903675471,
-        "normalized": 0.03873832593392408
+        "mean_abs": 0.017345823543478592,
+        "max_abs": 0.046613073019922235,
+        "normalized": 0.039396718369206524
       },
       "influence": {
         "overall": {
           "mean_openness": 0.18524766597510364,
           "std_openness": 0.10816293367086983,
-          "mean_received": 0.0026498857514378137
+          "mean_received": 0.002622825692264642
         },
         "window_a": {
           "mean_openness": 0.21591796875,
           "std_openness": 0.151269037200992,
-          "mean_received": 0.005240190184130366
+          "mean_received": 0.005165071065587228
         },
         "window_b": {
           "mean_openness": 0.16497070312499987,
           "std_openness": 0.0572556096612771,
-          "mean_received": 0.0009414181140277636
+          "mean_received": 0.0009462095106903119
         }
       },
       "reducibility": {
         "full": {
-          "r_squared": 0.895064,
+          "r_squared": 0.897136,
           "converged": true,
           "n": 241
         },
         "stages": {
           "A 青春期(12-20岁)": {
-            "r_squared": 0.658535,
+            "r_squared": 0.676601,
             "converged": true,
             "n": 96
           },
           "B 成年后(20-32岁)": {
-            "r_squared": 0.077843,
+            "r_squared": 0.079074,
             "converged": true,
             "n": 144
           }
@@ -247,15 +247,15 @@
         {
           "state": "state_happiness",
           "first": 0.16533437442389107,
-          "last": 0.098907081121212,
-          "slope": 0.00021983339948946056,
+          "last": 0.09886070725343173,
+          "slope": 0.00022534686675231843,
           "direction": "diverging"
         },
         {
           "state": "state_stress",
           "first": 0.354014721644688,
-          "last": 0.10003130398484648,
-          "slope": -0.0005650150112821056,
+          "last": 0.09965638272879085,
+          "slope": -0.0005585427772312542,
           "direction": "converging"
         }
       ]

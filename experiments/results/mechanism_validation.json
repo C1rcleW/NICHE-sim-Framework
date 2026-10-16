@@ -188,9 +188,9 @@
         "staged_openness": 0.7225000000000003,
         "constant_openness": 0.5,
         "openness_ratio": 1.4450000000000005,
-        "observed_ratio": 1.1282072511864818,
-        "staged_mean_influence": 0.009764860980197108,
-        "constant_mean_influence": 0.008655201400210704
+        "observed_ratio": 1.1393693820603692,
+        "staged_mean_influence": 0.010078421898138477,
+        "constant_mean_influence": 0.00884561412376489
       },
       {
         "stage": "学龄期",
@@ -202,9 +202,9 @@
         "staged_openness": 0.5043427230046947,
         "constant_openness": 0.5,
         "openness_ratio": 1.0086854460093895,
-        "observed_ratio": 0.8334434066310807,
-        "staged_mean_influence": 0.017373034172657908,
-        "constant_mean_influence": 0.020844887648559907
+        "observed_ratio": 0.837908056464663,
+        "staged_mean_influence": 0.017744287344331065,
+        "constant_mean_influence": 0.021176890719010997
       },
       {
         "stage": "青春期",
@@ -216,9 +216,9 @@
         "staged_openness": 0.2874479166666661,
         "constant_openness": 0.5,
         "openness_ratio": 0.5748958333333322,
-        "observed_ratio": 0.02638697279498957,
-        "staged_mean_influence": 0.007436397880793206,
-        "constant_mean_influence": 0.2818208037189188
+        "observed_ratio": 0.026150510120953614,
+        "staged_mean_influence": 0.007303921020075408,
+        "constant_mean_influence": 0.2793031947098805
       },
       {
         "stage": "成年早期",
@@ -230,16 +230,16 @@
         "staged_openness": 0.22041666666666562,
         "constant_openness": 0.5,
         "openness_ratio": 0.44083333333333125,
-        "observed_ratio": 0.016709293426440407,
-        "staged_mean_influence": 3.822638448555584e-05,
-        "constant_mean_influence": 0.0022877319531098353
+        "observed_ratio": 0.015018581605682512,
+        "staged_mean_influence": 3.46483267645173e-05,
+        "constant_mean_influence": 0.002307030562154256
       }
     ],
     "ratios": [
-      1.1282072511864818,
-      0.8334434066310807,
-      0.02638697279498957,
-      0.016709293426440407
+      1.1393693820603692,
+      0.837908056464663,
+      0.026150510120953614,
+      0.015018581605682512
     ],
     "ratio_decreasing": true,
     "weaker_when_openness_below_half": true,
@@ -247,26 +247,26 @@
       {
         "stage": "学前期",
         "openness_ratio": 1.4450000000000005,
-        "observed_ratio": 1.1282072511864818,
-        "amplification_factor": 1.2807930444343119
+        "observed_ratio": 1.1393693820603692,
+        "amplification_factor": 1.2682454195731911
       },
       {
         "stage": "学龄期",
         "openness_ratio": 1.0086854460093895,
-        "observed_ratio": 0.8334434066310807,
-        "amplification_factor": 1.2102626740868545
+        "observed_ratio": 0.837908056464663,
+        "amplification_factor": 1.2038139963294752
       },
       {
         "stage": "青春期",
         "openness_ratio": 0.5748958333333322,
-        "observed_ratio": 0.02638697279498957,
-        "amplification_factor": 21.787108274977832
+        "observed_ratio": 0.026150510120953614,
+        "amplification_factor": 21.984115440741842
       },
       {
         "stage": "成年早期",
         "openness_ratio": 0.44083333333333125,
-        "observed_ratio": 0.016709293426440407,
-        "amplification_factor": 26.38252390946505
+        "observed_ratio": 0.015018581605682512,
+        "amplification_factor": 29.352527749127464
       }
     ]
   },
@@ -283,56 +283,56 @@
       },
       {
         "strength": 0.5,
-        "mean_abs_deviation": 0.04366734485667616,
-        "max_abs_deviation": 0.11365949007731929,
-        "final_deviation": 8.419064359462455e-07,
-        "paired_noise": 0.009081380926823306,
-        "snr": 4.808447658846431,
+        "mean_abs_deviation": 0.04261112976286053,
+        "max_abs_deviation": 0.11248859740459377,
+        "final_deviation": 8.155198928938567e-07,
+        "paired_noise": 0.009250083300450088,
+        "snr": 4.60656713878319,
         "clamped_fraction": 0.0
       },
       {
         "strength": 1.0,
-        "mean_abs_deviation": 0.05338814765796933,
-        "max_abs_deviation": 0.14381716954961796,
-        "final_deviation": 1.0322764342022654e-06,
-        "paired_noise": 0.011666432436160216,
-        "snr": 4.576218818401782,
+        "mean_abs_deviation": 0.05213863281764895,
+        "max_abs_deviation": 0.14241039315952958,
+        "final_deviation": 9.98136148455675e-07,
+        "paired_noise": 0.01187131581845572,
+        "snr": 4.391984310331607,
         "clamped_fraction": 0.0
       },
       {
         "strength": 2.0,
-        "mean_abs_deviation": 0.060232034298783814,
-        "max_abs_deviation": 0.1664074648815311,
-        "final_deviation": 1.1922210600701089e-06,
-        "paired_noise": 0.013687881038190153,
-        "snr": 4.400391421486802,
+        "mean_abs_deviation": 0.05885440497186761,
+        "max_abs_deviation": 0.16445584346326855,
+        "final_deviation": 1.1505146444712455e-06,
+        "paired_noise": 0.013922632655032427,
+        "snr": 4.227246845487538,
         "clamped_fraction": 0.0
       },
       {
         "strength": 4.0,
-        "mean_abs_deviation": 0.064430629517382,
-        "max_abs_deviation": 0.18128118644443045,
-        "final_deviation": 1.295096366972966e-06,
-        "paired_noise": 0.017268979423476563,
-        "snr": 3.7310038964891494,
+        "mean_abs_deviation": 0.06297338501927369,
+        "max_abs_deviation": 0.17948574411173635,
+        "final_deviation": 1.2459155439570324e-06,
+        "paired_noise": 0.017652828656587433,
+        "snr": 3.567325454992969,
         "clamped_fraction": 0.0
       },
       {
         "strength": 8.0,
-        "mean_abs_deviation": 0.07886143812830398,
-        "max_abs_deviation": 0.1863798652386285,
-        "final_deviation": 1.3909336792257883e-06,
-        "paired_noise": 0.2855680583489259,
-        "snr": 0.2761563691130535,
-        "clamped_fraction": 0.5011074197120708
+        "mean_abs_deviation": 0.07794932179529292,
+        "max_abs_deviation": 0.18555773636261907,
+        "final_deviation": 1.3255974755192283e-06,
+        "paired_noise": 0.28551997845502536,
+        "snr": 0.2730082925092801,
+        "clamped_fraction": 0.49224806201550386
       },
       {
         "strength": 16.0,
-        "mean_abs_deviation": 0.09465863167070393,
-        "max_abs_deviation": 0.35304653190529517,
-        "final_deviation": 7.40993170618894e-07,
-        "paired_noise": 0.28105179905382155,
-        "snr": 0.33680137252057496,
+        "mean_abs_deviation": 0.09463440106758124,
+        "max_abs_deviation": 0.35222440302928576,
+        "final_deviation": 7.55364391304599e-07,
+        "paired_noise": 0.28104990894857795,
+        "snr": 0.33671742297164714,
         "clamped_fraction": 0.5542635658914729
       }
     ],
@@ -343,22 +343,22 @@
   "e4": {
     "childhood": {
       "n": 168,
-      "mean_deviation": 0.10963186436216049,
-      "max_deviation": 0.18128118644443045,
-      "signed_mean": 0.10963186436216049,
-      "paired_noise": 0.029295823140903107,
-      "snr": 3.742235329414296
+      "mean_deviation": 0.10724146192215252,
+      "max_deviation": 0.17948574411173635,
+      "signed_mean": 0.10724146192215252,
+      "paired_noise": 0.029828736333862585,
+      "snr": 3.5952398627228606
     },
     "adulthood": {
       "n": 133,
-      "mean_deviation": 0.0073343328713459995,
-      "max_deviation": 0.07803849323977917,
-      "signed_mean": 0.0073343328713459995,
-      "paired_noise": 0.002077176833043028,
-      "snr": 3.5309140534758083
+      "mean_deviation": 0.007055814194584643,
+      "max_deviation": 0.07507500927268122,
+      "signed_mean": 0.007055814194584643,
+      "paired_noise": 0.002272734748450398,
+      "snr": 3.1045480337709703
     },
     "persists_into_adulthood": true,
-    "decay_ratio": 0.06689964559133639
+    "decay_ratio": 0.06579371511837948
   },
   "verdicts": [
     {
