@@ -59,10 +59,16 @@ function makeElement(id) {
   // 并让 value/selectedIndex 保持一致（否则 fitSelectionBlocked 的行为无法验证）
   function parseOptions(html) {
     const found = [];
-    const re = /<option\s+value="([^"]*)"([^>]*)>/g;
+    // 同时抓取标签属性与**显示文本**：文本是断言"选项后缀"的唯一依据，
+    // 只解析 value 会让"选项文案是否区分自动映射/原生映射"无法验证。
+    const re = /<option\s+value="([^"]*)"([^>]*)>([\s\S]*?)<\/option>/g;
     let match;
     while ((match = re.exec(html)) !== null) {
-      found.push({ value: match[1], disabled: /\bdisabled\b/.test(match[2]) });
+      found.push({
+        value: match[1],
+        disabled: /\bdisabled\b/.test(match[2]),
+        textContent: match[3].replace(/<[^>]*>/g, '').trim(),
+      });
     }
     return found;
   }
@@ -387,6 +393,143 @@ function verifyTemplateIds() {
   check(missingIds.length === 0, '模板包含 harness 依赖的全部 id', missingIds.length ? `缺少 ${JSON.stringify(missingIds)}` : 'ok');
 }
 
+// ── C1：映射透明化（round-2 审查）────────────────────────────────────────
+//
+// 回归：/api/models 的 suggested_mapping 对抽象模型是**从可用列里按字母序任取**
+// 的替代品，前端自动提交给 /api/fit，返回 status=ok + converged=true，
+// 而界面从不显示究竟拟合了哪两列（state_columns 由后端返回，前端 0 处引用）。
+
+const AUTO_MAPPED = {
+  models: [
+    {
+      name: 'square_law',
+      directly_fittable: false,
+      needs_manual_mapping: false,
+      mapping_kind: 'auto',
+      suggested_mapping: { R1: 'state_economic_pressure', R2: 'state_education' },
+    },
+    {
+      name: 'wellbeing',
+      directly_fittable: true,
+      needs_manual_mapping: false,
+      mapping_kind: 'default',
+      suggested_mapping: { happiness: 'state_happiness', stress: 'state_stress' },
+    },
+  ],
+  usable_state_columns: ['state_economic_pressure', 'state_education', 'state_happiness', 'state_stress'],
+  constant_state_columns: [],
+};
+
+const FIT_BAD_R2 = {
+  status: 'ok',
+  model: 'square_law',
+  state_columns: { R1: 'state_economic_pressure', R2: 'state_education' },
+  summary: {
+    model: 'square_law',
+    params: { a: 1.0, b: 2.0 },
+    r_squared: -2368436.78,
+    converged: true,
+    params_at_bounds: [],
+    hit_sentinel: false,
+  },
+  predict_trace: [],
+  warning: null,
+};
+
+async function scenarioAutoMappingIsVisible() {
+  console.log('\n== 场景 C1a：自动映射必须可见（后缀 + 实际列名）==');
+  const { sandbox, get, requests } = loadDashboard((url) => {
+    const target = String(url);
+    if (target.includes('/api/models')) return AUTO_MAPPED;
+    if (target.includes('/api/fit')) return FIT_BAD_R2;
+    return undefined;
+  });
+  get('fitAgent').value = '';
+  await sandbox.loadModelInfo();
+
+  const sel = get('fitModel');
+  const squareOption = Array.from(sel.options).find((o) => o.value === 'square_law');
+  const wellbeingOption = Array.from(sel.options).find((o) => o.value === 'wellbeing');
+  check(!!squareOption && !!wellbeingOption, '两个模型都出现在下拉中');
+  // 自动映射与原生映射必须能被区分：此前两者共用「需映射」或干脆无后缀
+  check(
+    /auto-mapped|自动映射/.test(String(squareOption.textContent)),
+    'square_law 的选项标注"自动映射"',
+    String(squareOption.textContent),
+  );
+  check(
+    !/auto-mapped|自动映射|needs mapping|需映射/.test(String(wellbeingOption.textContent)),
+    'wellbeing（原生映射）不得带任何映射后缀',
+    String(wellbeingOption.textContent),
+  );
+
+  // 真实拟合：结果卡片必须显示实际使用的状态列
+  sel.value = 'square_law';
+  sel.dataset.allDisabled = '';
+  await sandbox.runFitting();
+  const kpis = String(get('fitKPIs').innerHTML);
+  check(
+    kpis.includes('state_economic_pressure') && kpis.includes('state_education'),
+    '结果卡片显示实际使用的状态列',
+    kpis.slice(0, 200),
+  );
+  check(
+    /自动从可用列中选取|picked automatically/.test(kpis),
+    '自动映射给出显式告警（结果只反映替代列，不代表模型原意）',
+    kpis.slice(0, 260),
+  );
+  const fitBody = requests.filter((r) => r.url.includes('/api/fit')).pop();
+  check(
+    !!fitBody && String(fitBody.body).includes('state_economic_pressure'),
+    '发出的 /api/fit 请求确实携带该映射',
+    fitBody ? String(fitBody.body) : 'no fit request',
+  );
+}
+
+async function scenarioNonPositiveR2DoesNotLookLikePass() {
+  console.log('\n== 场景 C1b：R² 非正时 Converged 不构成"通过" ==');
+  const { sandbox, get } = loadDashboard((url) => {
+    const target = String(url);
+    if (target.includes('/api/models')) return AUTO_MAPPED;
+    if (target.includes('/api/fit')) return FIT_BAD_R2;
+    return undefined;
+  });
+  get('fitAgent').value = '';
+  await sandbox.loadModelInfo();
+  const sel = get('fitModel');
+  sel.value = 'square_law';
+  sel.dataset.allDisabled = '';
+  await sandbox.runFitting();
+  const kpis = String(get('fitKPIs').innerHTML);
+
+  // 修复前：<div class="value">是</div> 与 R²=-2368436 并排显示成两个成功指标
+  check(
+    /R\^2 is non-positive|R² 非正，Converged 不构成/.test(kpis),
+    'R² 非正时明确说明 Converged 不构成"通过"',
+    kpis.slice(0, 240),
+  );
+  check(
+    kpis.includes('result-kpi muted'),
+    '对应的 KPI 卡片被降级显示（不再与荒谬的 R² 并排当成功指标）',
+  );
+
+  // 对照：R² 为正时不得出现该降级
+  const good = loadDashboard((url) => {
+    const target = String(url);
+    if (target.includes('/api/models')) return AUTO_MAPPED;
+    if (target.includes('/api/fit')) return FIT_OK;
+    return undefined;
+  });
+  good.get('fitAgent').value = '';
+  await good.sandbox.loadModelInfo();
+  const gsel = good.get('fitModel');
+  gsel.value = 'wellbeing';
+  gsel.dataset.allDisabled = '';
+  await good.sandbox.runFitting();
+  const goodKpis = String(good.get('fitKPIs').innerHTML);
+  check(!goodKpis.includes('result-kpi muted'), 'R² 为正时不出现降级样式');
+}
+
 (async () => {
   verifyTemplateIds();
   await scenarioAllDisabled();
@@ -395,6 +538,8 @@ function verifyTemplateIds() {
   await scenarioOneAvailable();
   await scenarioStaleResponseDiscarded();
   await scenarioRunSimulationStatus();
+  await scenarioAutoMappingIsVisible();
+  await scenarioNonPositiveR2DoesNotLookLikePass();
   console.log('');
   if (failures.length) {
     console.log(`结果：失败 ${failures.length} 项 -> ${JSON.stringify(failures)}`);

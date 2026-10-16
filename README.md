@@ -438,7 +438,7 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
   author = {C1rcleW},
   year   = {2026},
   url    = {https://github.com/C1rcleW/NICHE-sim-Framework},
-  note   = {Version 0.1.0}
+  note   = {Version 0.1.1}
 }
 ```
 
@@ -452,9 +452,9 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
 
 ## 版本
 
-当前版本 **0.1.0**（首个公开版本）。变更历史见 [CHANGELOG.md](CHANGELOG.md)，
+当前版本 **0.1.1**。变更历史见 [CHANGELOG.md](CHANGELOG.md)，
 发布产物见 [Releases](https://github.com/C1rcleW/NICHE-sim-Framework/releases)，
-本次发布说明见 [docs/release-notes-0.1.0.md](docs/release-notes-0.1.0.md)。
+本次发布说明见 [docs/release-notes-0.1.1.md](docs/release-notes-0.1.1.md)。
 
 引用本项目的规范格式见 [CITATION.cff](CITATION.cff)。
 

@@ -29,7 +29,11 @@ const I18N = {
     'charts.no_data': '当前选择下没有可绘制的数据（该 agent 没有对应状态量）。',
     'fitting.need_mapping': '该模型的状态名与 ABM 列名没有默认对应关系，无法直接拟合。',
     'fitting.mapping_suffix': ' （需映射）',
+    'fitting.mapping_auto_suffix': ' （自动映射，非原生状态）',
     'fitting.manual_suffix': ' （需人工指定映射）',
+    'fitting.uses_columns': '拟合使用的状态列：{0}',
+    'fitting.mapping_auto_warn': '该模型的原生状态列不可用，已自动从可用列中选取替代列；结果只反映这些列之间的关系，不代表模型原意。',
+    'fitting.converged_not_meaningful': 'R² 非正，Converged 不构成"通过"',
     'fitting.warn_sentinel': '优化停在失败哨兵：该解未成功积分，R² 无意义。',
     'fitting.warn_bounds': '参数被边界钉住：{0}（该方向可能不可辨识或边界不合适）。',
     'fitting.warn_r2_nonpositive': 'R² 非正：该模型结构不适合这些状态列，Converged 只表示优化器跑完了。',
@@ -102,7 +106,11 @@ const I18N = {
     'charts.no_data': 'No plottable data for the current selection (this agent has no such state).',
     'fitting.need_mapping': 'This model has no default column mapping and cannot be fitted directly.',
     'fitting.mapping_suffix': ' (needs mapping)',
+    'fitting.mapping_auto_suffix': ' (auto-mapped, not native states)',
     'fitting.manual_suffix': ' (manual mapping required)',
+    'fitting.uses_columns': 'State columns used for the fit: {0}',
+    'fitting.mapping_auto_warn': 'This model\'s native state columns are unavailable, so substitute columns were picked automatically; the result describes those columns only, not the model\'s intent.',
+    'fitting.converged_not_meaningful': 'R^2 is non-positive; Converged is not a pass',
     'fitting.warn_sentinel': 'Optimizer stopped on the failure sentinel: the solution never integrated, R^2 is meaningless.',
     'fitting.warn_bounds': 'Parameters pinned at bounds: {0} (that direction may be unidentifiable or the bounds unsuitable).',
     'fitting.warn_r2_nonpositive': 'Non-positive R^2: this model structure does not suit these state columns; Converged only means the optimizer finished.',
@@ -440,7 +448,11 @@ async function loadModelInfo() {
     if (m.needs_manual_mapping) {
       return `<option value="${m.name}" disabled>${m.name}${t('fitting.manual_suffix')}</option>`;
     }
-    const suffix = m.directly_fittable ? '' : t('fitting.mapping_suffix');
+    // 后缀必须区分"原生映射"与"自动选取的替代列"：两者此前共用「需映射」，
+    // 而后者是字母序任取的，用户看不出模型被拟到了无关列上。
+    let suffix = '';
+    if (m.mapping_kind === 'auto') suffix = t('fitting.mapping_auto_suffix');
+    else if (!m.directly_fittable) suffix = t('fitting.mapping_suffix');
     return `<option value="${m.name}">${m.name}${suffix}</option>`;
   });
   sel.innerHTML = options.join('');
@@ -635,14 +647,33 @@ async function runFitting() {
   if (s.params_at_bounds && s.params_at_bounds.length) {
     warnings.push(t('fitting.warn_bounds', s.params_at_bounds.join(', ')));
   }
+  // 自动映射必须显式告警：该模型的"原生状态"没有对应列，实际拟合的是替代列，
+  // 结果只反映这些列之间的关系（此前 UI 对此完全静默）。
+  const info = modelInfo[model];
+  if (info && info.mapping_kind === 'auto') {
+    warnings.push(t('fitting.mapping_auto_warn'));
+  }
   // R² 非正时也要显式提示：converged 只说明优化器跑完了，不代表模型适用
-  if (s.r_squared !== null && s.r_squared <= 0) {
+  const r2NonPositive = s.r_squared !== null && s.r_squared <= 0;
+  if (r2NonPositive) {
     warnings.push(t('fitting.warn_r2_nonpositive'));
   }
+  // 实际使用的状态列：后端已返回 state_columns（形如 {R1: 'state_x', R2: 'state_y'}
+  // 的**对象**，不是数组），但前端此前 0 处引用，用户无从判断究竟拟合了哪两个变量。
+  const usedCols = res.state_columns && typeof res.state_columns === 'object'
+    ? Object.values(res.state_columns).join(', ')
+    : '';
+  const colsLine = usedCols
+    ? `<div class="fit-columns">${t('fitting.uses_columns', usedCols)}</div>`
+    : '';
+  // R² 非正时不能把 Converged 作为独立的"通过"指标并排展示
+  const convergedText = r2NonPositive
+    ? t('fitting.converged_not_meaningful')
+    : (s.converged ? t('fitting.converged_yes') : t('fitting.converged_no'));
   document.getElementById('fitKPIs').innerHTML = `
     <div class="result-kpi"><div class="value">${s.r_squared !== null ? s.r_squared.toFixed(4) : '\u2014'}</div><div class="label">R^2</div></div>
-    <div class="result-kpi"><div class="value">${s.converged ? t('fitting.converged_yes') : t('fitting.converged_no')}</div><div class="label">Converged</div></div>
-  ` + (warnings.length
+    <div class="result-kpi${r2NonPositive ? ' muted' : ''}"><div class="value">${convergedText}</div><div class="label">Converged</div></div>
+  ` + colsLine + (warnings.length
     ? `<div class="fit-warning">${warnings.map(w => `<div>\u26a0 ${w}</div>`).join('')}</div>`
     : '');
   document.getElementById('fitParams').innerHTML = Object.entries(s.params).map(([k, v]) =>

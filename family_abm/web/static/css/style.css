@@ -56,6 +56,16 @@ nav.tabs button:hover { background:#f1f3f6; }
 .result-kpi { text-align:center; padding:14px; background:#f8fafc; border-radius:8px; border:1px solid var(--border); }
 .result-kpi .value { font-size:1.6rem; font-weight:700; color:var(--primary); }
 .result-kpi .label { font-size:.75rem; color:var(--muted); margin-top:4px; }
+/* R² 非正时 Converged 不构成"通过"：缩小字号并去强调色，
+   避免与荒谬的 R² 并排显示成一个成功指标 */
+.result-kpi.muted { background:#f1f3f6; }
+.result-kpi.muted .value { font-size:.85rem; font-weight:600; color:var(--muted); line-height:1.4; }
+
+/* 实际参与拟合的状态列：后端返回 state_columns，必须让用户看见 */
+.fit-columns {
+  grid-column: 1 / -1; margin-top:8px; font-family:monospace;
+  font-size:.78rem; color:var(--muted); word-break:break-all;
+}
 
 .fit-params { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
 .fit-param { background:#f1f3f6; padding:6px 14px; border-radius:20px; font-size:.8rem; font-family:monospace; }

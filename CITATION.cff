@@ -15,7 +15,7 @@ authors:
 repository-code: "https://github.com/C1rcleW/NICHE-sim-Framework"
 url: "https://github.com/C1rcleW/NICHE-sim-Framework"
 license: MIT
-version: "0.1.0"
+version: "0.1.1"
 date-released: "2026-10-10"
 keywords:
   - agent-based-model

@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+import asyncio
+import functools
+import json
+import logging
+import os
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from ..core.environment import Environment
 from ..core.scheduler import Scheduler
@@ -23,8 +30,91 @@ from ..niche.micro_niche import MicroNiche
 HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(HERE / 'templates'))
 
-app = FastAPI(title='Family ABM Dashboard', version='0.2.0')
+
+def _package_version() -> str:
+    """版本号取自包源代码声明，避免与 pyproject.toml 漂移。
+
+    round-2 审查 D8：此处曾硬编码 `version='0.2.0'`，而包版本已是 0.1.0，
+    于是 /openapi.json 报告的版本与实际安装的包不一致（对外文档错误）。
+    单一真源是 pyproject.toml 的 [project].version（见 family_abm/__init__.py，
+    两者由 tests/test_packaging.py 强制一致）。
+
+    这里优先用源码里的 `__version__` 而不是 `importlib.metadata.version()`：
+    后者读的是**安装元数据**，在 editable 安装下可能滞后于源码（改了版本号但
+    没重装时会报出旧版本，实测踩到过）。源码版本才是与 pyproject 同步的那个。
+    """
+    from .. import __version__
+
+    return __version__
+
+
+app = FastAPI(title='Family ABM Dashboard', version=_package_version())
 app.mount('/static', StaticFiles(directory=str(HERE / 'static')), name='static')
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """把校验错误也变成**必然可序列化**的结构化 JSON。
+
+    背景：Pydantic 的 422 详情里会回显出错位置的输入值与上下文。当输入含
+    `nan`/`inf` 时（JSON 允许这两个字面量），`float('nan')` 无法被序列化成合法
+    JSON；`model_validator` 里抛出的异常对象还会被放进 `ctx`。两者都会让
+    FastAPI 在**生成 422 响应时自己抛错**——错误处理反而变成故障。
+
+    这里对每个字段做一次试探性序列化，不可序列化的降级为字符串表示，
+    保证响应一定发得出去。
+
+    契约与其它端点一致：`{'error': ..., 'status': 'validation_error'}` + 原始详情。
+    """
+
+    def _safe(value: Any) -> Any:
+        """能序列化就原样保留，否则降级为 repr（保留可读性又不破坏 JSON）。"""
+        try:
+            json.dumps(value, allow_nan=False)
+        except (TypeError, ValueError):
+            return repr(value)
+        return value
+
+    errors = []
+    for err in exc.errors():
+        item = {key: _safe(val) for key, val in err.items()}
+        errors.append(item)
+
+    first = errors[0].get('msg', '请求体校验失败') if errors else '请求体校验失败'
+    return JSONResponse(
+        {
+            'error': f'请求体校验失败：{first}',
+            'status': 'validation_error',
+            'detail': errors,
+        },
+        422,
+    )
+
+logger = logging.getLogger('family_abm.web')
+
+# /api/fit 的 CPU 密集工作放在 worker 线程里执行（见 api_fit），超过该秒数即返回
+# 结构化 504。可用环境变量 FAMILY_ABM_FIT_TIMEOUT_SECONDS 覆盖；非法值回退默认值。
+DEFAULT_FIT_TIMEOUT_SECONDS = 120.0
+
+
+def _load_fit_timeout_seconds() -> float:
+    raw = os.environ.get('FAMILY_ABM_FIT_TIMEOUT_SECONDS', '').strip()
+    if not raw:
+        return DEFAULT_FIT_TIMEOUT_SECONDS
+    try:
+        seconds = float(raw)
+    except ValueError:
+        logger.warning('FAMILY_ABM_FIT_TIMEOUT_SECONDS=%r 不是数字，回退到 %.0fs',
+                       raw, DEFAULT_FIT_TIMEOUT_SECONDS)
+        return DEFAULT_FIT_TIMEOUT_SECONDS
+    if seconds <= 0:
+        logger.warning('FAMILY_ABM_FIT_TIMEOUT_SECONDS=%r 不是正数，回退到 %.0fs',
+                       raw, DEFAULT_FIT_TIMEOUT_SECONDS)
+        return DEFAULT_FIT_TIMEOUT_SECONDS
+    return seconds
+
+
+FIT_TIMEOUT_SECONDS = _load_fit_timeout_seconds()
 
 # ── Global simulation state ────────────────────────────────────────────────
 _sim_env: Environment | None = None
@@ -34,23 +124,85 @@ _last_fitter = None
 
 # ── Pydantic models ────────────────────────────────────────────────────────
 
+class MemberConfig(BaseModel):
+    """家庭成员输入。
+
+    **必须是类型化模型，不能用 `dict`**：`allow_inf_nan=False` 对 `dict`/`Any`
+    类型的字段**不递归生效**（实测 `age=NaN` 仍然通过），而 `json.loads` 默认
+    接受 `NaN`/`Infinity` 字面量。类型化之后 NaN 在校验层被拒（422），
+    而不是等到仿真跑完、/api/data 才以 500/400 暴露——错误离现场近得多。
+
+    `extra='allow'`：成员允许带额外属性（会进入 `FamilyMember.attributes`），
+    保持向后兼容；但已知字段的类型会被强校验。
+    """
+    model_config = ConfigDict(allow_inf_nan=False, extra='allow')
+
+    name: str
+    age: float = 25.0
+    gender: str = 'other'
+    role_name: str = 'adult'
+    personality: dict[str, float] | None = None
+
+    @field_validator('age')
+    @classmethod
+    def _age_reasonable(cls, value: float) -> float:
+        """年龄必须在合理区间：负年龄或超大年龄会让生命阶段推导失去意义。"""
+        if value < 0 or value > 120:
+            raise ValueError(f'age 必须在 0–120 之间，收到 {value}')
+        return value
+
+
+class FamilyConfig(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
+    name: str
+    members: list[MemberConfig] = []
+
+
 class SimConfig(BaseModel):
+    # allow_inf_nan=False：JSON 允许 NaN/Infinity 字面量（json.loads 默认接受），
+    # 此前 age=NaN 会被接受、在 10 步之后才表现为 /api/data 的 500/400，
+    # 错误离现场很远。这里在校验层直接拒绝。
+    model_config = ConfigDict(allow_inf_nan=False)
+
     steps: int = 120
     # 随机种子：给出后同一配置可复现（含智能体初始化）。
     # 默认 42 而非 None，使 Web 端默认行为可复现。
     seed: int | None = 42
-    params: dict = {}
-    families: list[dict] = [
-        {'name': 'Smith', 'members': [
-            {'name': 'Father', 'age': 40, 'gender': 'male', 'role_name': 'parent'},
-            {'name': 'Mother', 'age': 38, 'gender': 'female', 'role_name': 'parent'},
-            {'name': 'Child',  'age': 10, 'gender': 'male',   'role_name': 'child'},
-        ]},
-        {'name': 'Jones', 'members': [
-            {'name': 'Mom',   'age': 35, 'gender': 'female', 'role_name': 'parent'},
-            {'name': 'Daughter', 'age': 8, 'gender': 'female', 'role_name': 'child'},
-        ]},
+    # 动力学参数：必须是数值。此前是裸 dict，params.randomness="abc" 会一路传到
+    # 仿真内部才抛转换错误。
+    params: dict[str, float] = {}
+    # 默认值必须用模型构造：Pydantic v2 **不校验 default**，若这里写裸 dict，
+    # 请求未提供 families 时 `fam.name` 会抛 AttributeError（只在默认路径出现，
+    # 显式传 families 的请求反而正常——很容易漏测）。
+    families: list[FamilyConfig] = [
+        FamilyConfig(name='Smith', members=[
+            MemberConfig(name='Father', age=40, gender='male', role_name='parent'),
+            MemberConfig(name='Mother', age=38, gender='female', role_name='parent'),
+            MemberConfig(name='Child', age=10, gender='male', role_name='child'),
+        ]),
+        FamilyConfig(name='Jones', members=[
+            MemberConfig(name='Mom', age=35, gender='female', role_name='parent'),
+            MemberConfig(name='Daughter', age=8, gender='female', role_name='child'),
+        ]),
     ]
+
+    @model_validator(mode='after')
+    def _check_ranges(self) -> SimConfig:
+        """把"取值必然导致崩溃"的参数挡在校验层，返回 422 而不是 500。
+
+        `income_age_spread` 在收入年龄曲线里做分母（`2 * spread ** 2`），
+        取 0 会抛 ZeroDivisionError——此前表现为 500 internal_error，
+        而它其实是**输入问题**，应当是 4xx。UI 上该输入框的 min="0"，
+        所以这是可达的。
+        """
+        spread = self.params.get('income_age_spread')
+        if spread is not None and spread <= 0:
+            raise ValueError(f'income_age_spread 必须为正数（收入年龄曲线的宽度），收到 {spread}')
+
+        if self.steps < 0:
+            raise ValueError(f'steps 不能为负数，收到 {self.steps}')
+        return self
 
 class FitRequest(BaseModel):
     model_name: str = 'wellbeing'
@@ -60,6 +212,76 @@ class FitRequest(BaseModel):
     # 默认语义对应关系，必须由调用方显式给出；默认 None 表示使用
     # 「状态名 -> state_<状态名>」约定。
     state_mapping: dict[str, str] | None = None
+
+
+# ── 端点兜底：任何未预期异常都必须保持结构化 JSON ──────────────────────────
+#
+# 背景（round-2 审查 C3）：此前只有 /api/fit 有函数级 try/except，其余端点一旦抛
+# 异常就走 Starlette 默认 500，返回 text/plain "Internal Server Error"——前端
+# res.json() 解析失败、HTTP 状态码也丢了，用户只看到一句 JSON 语法错误。
+# 下面这个装饰器把端点包成与 /api/fit 一致的契约：
+#   ValueError（可预期的输入问题）→ 400 {'error': <人话>, 'status': 'invalid_input'}
+#   其它 Exception（服务端 bug）  → 500 {'error': <人话>, 'status': 'internal_error'}
+# 并把完整 traceback 写进 logging（不是吞掉）。
+
+_INPUT_ERROR_HINTS = (
+    ('could not convert string to float', '参数或成员字段需要数值，但收到了无法解析的字符串'),
+    ('invalid literal for int', '参数或成员字段需要整数，但收到了无法解析的字符串'),
+    ('JSON compliant', '数据中存在 NaN/Inf 等非有限数值（例如 /api/run 传入了 age=NaN）'),
+    ('division by zero', '某个参数取值为 0 导致除零（例如 income_age_spread=0）'),
+    ('unexpected keyword argument', '家庭成员字段含未知键（可用键：name/age/gender/role_name/personality）'),
+    ('unsupported operand', '成员字段类型不合法（age 等数值字段收到了字符串）'),
+)
+
+
+def _describe_exception(exc: BaseException) -> str:
+    """把异常翻译成一句对用户有用的话，而不是直接甩出 Python 原文。"""
+    text = str(exc).lower()
+    for needle, hint in _INPUT_ERROR_HINTS:
+        if needle.lower() in text:
+            return hint
+    if isinstance(exc, KeyError):
+        missing = exc.args[0] if exc.args else '?'
+        return f'请求体缺少必需字段 {missing!r}（families[*] 需要 name，members[*] 需要 name）'
+    if isinstance(exc, TypeError):
+        return '请求体字段类型不合法（例如 age 传入了字符串，或成员字段含未知键）'
+    if isinstance(exc, ValueError):
+        return '请求体含非法数值'
+    return f'服务端内部错误（{type(exc).__name__}）'
+
+
+def _guard_endpoint(endpoint: str):
+    """给端点加函数级兜底；成功路径原样返回，不改变任何响应字段。"""
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            try:
+                return await func(*args, **kwargs)
+            except HTTPException:
+                # 显式声明的 HTTP 语义（404/422 等）原样透出，不要被包成 500
+                raise
+            except ValueError as exc:
+                # 可预期的输入问题：保持与 /api/fit 相同的 400 invalid_input 契约
+                logger.warning('%s 输入问题 (%s): %s', endpoint, type(exc).__name__, exc)
+                return JSONResponse({
+                    'error': f'{endpoint} 无法完成请求：{_describe_exception(exc)}',
+                    'status': 'invalid_input',
+                }, 400)
+            except Exception as exc:
+                # 未预期异常：记录完整 traceback，返回结构化 500（绝不只吞掉）
+                logger.error('%s 未预期异常: %s', endpoint, exc, exc_info=True)
+                return JSONResponse({
+                    'error': (
+                        f'{endpoint} 处理请求时发生服务端错误（{type(exc).__name__}）。'
+                        f'详情已记录到服务端日志。可能的原因：{_describe_exception(exc)}'
+                    ),
+                    'status': 'internal_error',
+                }, 500)
+
+        return wrapper
+
+    return decorator
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────
@@ -99,6 +321,7 @@ async def api_params():
 
 
 @app.post('/api/run')
+@_guard_endpoint('POST /api/run')
 async def api_run(cfg: SimConfig):
     global _sim_env, _sim_df, _sim_recorder
 
@@ -108,10 +331,12 @@ async def api_run(cfg: SimConfig):
     sim = Simulation(env, scheduler=Scheduler('sequential'), seed=cfg.seed)
 
     for fam in cfg.families:
-        hh = Household(name=f"{fam['name']} Household", environment=env)
+        hh = Household(name=f"{fam.name} Household", environment=env)
         env.add_agent(hh)
-        for m in fam['members']:
-            member = FamilyMember(environment=env, **m)
+        for m in fam.members:
+            # exclude_none：personality=None 表示"未指定"，交给 FamilyMember 自己
+            # 生成；若原样传入会把 None 当成显式人格值。
+            member = FamilyMember(environment=env, **m.model_dump(exclude_none=True))
             hh.add_member(member)
 
     recorder = StateRecorder(record_agents=True)
@@ -131,6 +356,7 @@ async def api_run(cfg: SimConfig):
 
 
 @app.get('/api/data')
+@_guard_endpoint('GET /api/data')
 async def api_data():
     global _sim_df, _sim_env
     if _sim_df is None or _sim_env is None:
@@ -255,6 +481,18 @@ async def api_models(agent_id: str | None = None):
                          if len(alternative) >= len(state_names) else None)
         needs_manual = bool(missing) and suggested is None
 
+        # mapping_kind 把三种情形显式区分开——此前前端只能看到 suggested_mapping
+        # 非空，无法分辨"模型原生状态恰好就是这两列"与"这是从可用列里按字母序
+        # 任取的替代品"。后者会被自动提交给 /api/fit，把 square_law 拟到
+        # economic_pressure/education 上，返回 status=ok + converged=true，
+        # 实测 R² 低至 -2368436——用户却看不到究竟拟合了哪两列。
+        if default_ok:
+            mapping_kind = 'default'
+        elif suggested is not None:
+            mapping_kind = 'auto'
+        else:
+            mapping_kind = 'none'
+
         models.append({
             'name': name,
             'state_names': state_names,
@@ -263,6 +501,7 @@ async def api_models(agent_id: str | None = None):
             'missing_states': missing,
             'directly_fittable': default_ok,
             'needs_manual_mapping': needs_manual,
+            'mapping_kind': mapping_kind,
             'suggested_mapping': suggested,
         })
     return JSONResponse({
@@ -276,8 +515,32 @@ async def api_models(agent_id: str | None = None):
 
 @app.post('/api/fit')
 async def api_fit(req: FitRequest):
+    """在线程池里跑 CPU 密集的拟合，并对事件循环加超时保护。
+
+    round-2 审查 C4：此前 `await _api_fit_impl(req)` 直接在事件循环里同步执行
+    `fit_robust`，一次 wellbeing robust=True 拟合 38.4s 期间整个单进程服务不可用
+    （并发的 GET /api/params 延迟 37.4s）。现在实现体是同步函数，由
+    `asyncio.to_thread` 放到 worker 线程执行，事件循环只等待结果；
+    `asyncio.wait_for` 给出可配置的上限（默认 120s，见 FIT_TIMEOUT_SECONDS）。
+
+    注意：线程无法被强制杀死——超时后请求立即收到结构化 504，但后台线程可能
+    仍会把这次拟合跑完（结果只写入 _last_fitter，不影响已返回的响应）。
+    """
+    timeout = FIT_TIMEOUT_SECONDS
     try:
-        return await _api_fit_impl(req)
+        return await asyncio.wait_for(
+            asyncio.to_thread(_api_fit_impl, req), timeout=timeout,
+        )
+    except asyncio.TimeoutError:
+        logger.error('POST /api/fit 超过 %gs 上限，放弃等待（worker 线程可能仍在运行）', timeout)
+        return JSONResponse({
+            'error': (
+                f'POST /api/fit 拟合超过 {timeout:g}s 上限，已放弃等待。'
+                '可减少步数或起点数、改用直接拟合，或用环境变量 '
+                'FAMILY_ABM_FIT_TIMEOUT_SECONDS 调大上限。'
+            ),
+            'status': 'fit_timeout',
+        }, 504)
     except ValueError as exc:
         return JSONResponse({'error': str(exc), 'status': 'invalid_input'}, 400)
     except RuntimeError as exc:
@@ -286,14 +549,18 @@ async def api_fit(req: FitRequest):
         # 函数级兜底：任何未预期异常都必须保持结构化 JSON。
         # 若让它逃出端点，FastAPI 会返回 text/plain "Internal Server Error"，
         # 前端 api() 只能拿到 JSON 解析错误，排障信息全部丢失。
+        logger.error('POST /api/fit 未预期异常: %s', exc, exc_info=True)
         return JSONResponse({
             'error': f'{type(exc).__name__}: {exc}',
             'status': 'fitting_error',
         }, 500)
 
 
-async def _api_fit_impl(req: FitRequest):
-    """api_fit 的实现体；异常处理统一由 api_fit 的函数级兜底负责。"""
+def _api_fit_impl(req: FitRequest):
+    """api_fit 的实现体（同步，由 api_fit 放进 worker 线程执行）。
+
+    异常处理统一由 api_fit 的函数级兜底负责。
+    """
     global _last_fitter
     if _sim_df is None:
         return JSONResponse({'error': 'No simulation data. POST /api/run first.'}, 400)
@@ -414,6 +681,7 @@ async def _api_fit_impl(req: FitRequest):
 
 
 @app.get('/api/niche')
+@_guard_endpoint('GET /api/niche')
 async def api_niche():
     global _sim_env, _sim_df
     if _sim_env is None or _sim_df is None:
@@ -443,6 +711,7 @@ async def api_niche():
 
 
 @app.get('/api/network')
+@_guard_endpoint('GET /api/network')
 async def api_network():
     global _sim_env
     if _sim_env is None:

@@ -6,11 +6,60 @@
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 `0.x` 阶段的次版本号可能包含不兼容改动。
 
-## [Unreleased]
+## [0.1.1]
+
+第二个公开发布。本版把 round-2 审查（5 条流水线、93 条发现）中已确认的问题修完，
+并修掉了三处「静默产出错误结论」的缺陷。
 
 ### 修正
 
-**实验结果与文档数字重新固化（round-2 审查 E-01）**
+**Web 契约与可用性**
+
+- **`/api/models` 的映射不再不可见**。抽象模型（`square_law`/`logistic`/`lotka_volterra` 等）
+  的原生状态名与 ABM 列没有语义对应，此前后端从可用列里**按字母序任取**替代品并自动
+  提交给 `/api/fit`：实测 6 个抽象模型全部映射到 `state_economic_pressure` +
+  `state_education`，返回 `status=ok` 且 `converged=true`，而 R² 低至 −2368436，
+  界面又从不显示究竟拟合了哪两列（后端返回的 `state_columns` 前端 0 处引用）。
+  现在：新增 `mapping_kind`（`default`/`auto`/`none`）显式区分原生映射与自动替代；
+  选项文案区分两者；结果卡片显示实际使用的状态列；自动映射给出显式告警；
+  **R² 非正时不再把 `Converged` 作为独立"通过"指标并排展示**。
+- **四个端点补上函数级兜底**（`/api/run`、`/api/data`、`/api/niche`、`/api/network`）。
+  此前只有 `/api/fit` 有兜底，其余端点一旦抛异常就返回 FastAPI 默认的
+  `text/plain "Internal Server Error"`——前端 `res.json()` 解析失败、HTTP 状态码
+  也丢失，用户只看到一句 JSON 语法错误。现与 `/api/fit` 同一契约：
+  `ValueError → 400 {'error','status':'invalid_input'}`、其它异常 →
+  `500 {'error','status':'internal_error'}` 并把完整 traceback 写进 logging。
+- **`/api/fit` 不再阻塞整个服务**。此前 CPU 密集的拟合在事件循环内同步执行，
+  实测一次 `wellbeing robust=True` 拟合耗时 38.39 秒，期间 `GET /api/params`
+  延迟 **37.39 秒**（整个单进程不可用）。现改为 `asyncio.to_thread` 执行并加超时保护
+  （默认 120 秒，可用 `FAMILY_ABM_FIT_TIMEOUT_SECONDS` 覆盖），超时返回结构化 504。
+  实测：拟合 30.3 秒期间轮询 `/api/params` 572 次全部 200，**最大延迟 0.029 秒**。
+
+**输入校验（把错误从"仿真深处"前移到"请求入口"）**
+
+- `SimConfig.families` 由 `list[dict]` 改为类型化的 `FamilyConfig`/`MemberConfig`，
+  `params` 由 `dict` 改为 `dict[str, float]`，并启用 `allow_inf_nan=False`。
+  此前 `age=NaN` 会被接受（`json.loads` 允许 NaN 字面量，而 `allow_inf_nan`
+  对 `dict` 字段不递归），一路进仿真，10 步之后才表现为 `/api/data` 的错误；
+  实测 6 个反例现在全部在校验层返回 **422**（而不是 500/400 或 text/plain）。
+- 新增 422 处理器：Pydantic 的校验详情会回显输入值与异常对象，含 `nan`/`inf`
+  或 `ValueError` 对象时**无法序列化**，会让 FastAPI 在生成响应时自己抛错
+  （错误处理变成故障）。现对每个字段做试探性序列化，不可序列化的降级为字符串。
+- 拒绝必然导致崩溃的参数：`income_age_spread <= 0`（收入年龄曲线的分母）、
+  `steps < 0`、`age` 超出 0–120。
+
+**其它**
+
+- `/openapi.json` 报告的版本号由硬编码的 `0.2.0` 改为从包元数据读取（与
+  `pyproject.toml` 单一真源一致）。
+- 拟合器补齐数值入口校验：`p0` 含 NaN/Inf 或长度不符、bounds 非有限或下界>上界、
+  数据含非有限值，均返回明确错误而不是让 `solve_ivp` 挂死或产出非法 JSON。
+- `tools/extract_release_notes.py` 的前半部分（研究问题/验证结果/安装命令）由
+  **硬编码改为从结果 JSON 派生**：此前它固定写着过时的数字、"五条结论全部成立"
+  （当时已是假话）与 `family_abm-0.1.0` 的安装命令，给任何版本生成说明都会把这些
+  错误内容带进 Release 正文。现已按版本号生成安装命令并如实列出各 tally。
+
+**实验结果与文档数字重新固化**
 
 审查发现三份结果文件全部与当前代码不一致：以各脚本默认参数重跑，E2/E3/E4 的
 随机量逐点偏移、可约性的 C1 由 0.674 掉到 0.518、敏感性分析的 **P2 tally 由
