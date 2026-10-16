@@ -332,7 +332,9 @@ hh.add_member(FamilyMember(name="Father", age=40, environment=env))
   影响强度属模型参数。结论必须配合敏感性分析说明稳健范围。
 - **小生境空间维度不完整**：`social` 维度依赖 `social_capital`，目前只有 `Household` 拥有该状态；
   `economic` 直接取收入值，未做归一化。
-- **`FeatureExtractor` 的缺失值处理**：当前会用 0 填充，用于监督学习前请自行处理缺失。
+- **`FeatureExtractor` 的缺失值处理**：`extract_features` 不填 0，按完整案例丢弃
+  特征列或目标含 `NaN` 的行（X/y 同一掩码对齐）。宽表里的 `NaN` 表示"该 agent
+  类型没有这个状态"，填 0 会伪造观测与监督信号；如需保留全部行请自行插补。
 - **ODE 拟合的适用性**：`wellbeing` 模型对 ABM 数据的拟合优度不高（R² 约 0.4），
   说明该模型结构与 ABM 的状态动力学并不吻合；报告结果时请勿把 R² 当作模型正确性的证据。
   此外 `wellbeing` 的 `p` 与 `income` 只以乘积 `p·income` 出现，二者无法分别确定。

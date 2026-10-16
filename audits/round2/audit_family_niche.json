@@ -1,0 +1,718 @@
+{
+  "stream": "B",
+  "task": "task-7",
+  "commit": "fe56135",
+  "working_tree": "dirty at audit time (pre-existing): family_member.py +24/-?, household.py +27, influence.py +25, relationships.py +25, tests/test_influence.py +104, tests/test_simulation_and_fitting.py +56 (git diff --stat). Audit targets the working tree (what actually runs), not the clean fe56135 tree.",
+  "scope": [
+    "family_abm/family/family_member.py",
+    "family_abm/family/household.py",
+    "family_abm/family/influence.py",
+    "family_abm/family/relationships.py",
+    "family_abm/family/roles.py",
+    "family_abm/niche/micro_niche.py",
+    "family_abm/niche/resources.py",
+    "family_abm/niche/influence.py"
+  ],
+  "file_sha256_at_audit": {
+    "family_abm/family/family_member.py": "8E30048B1DE7641C22287B099300DCCE2510BE7C6F1FF83E341DD1CA9DF0F651",
+    "family_abm/family/household.py": "3CEB8466467288DB07C6209071FB60A154E636F94D986899D0FD8AB9D43556FB",
+    "family_abm/family/influence.py": "5157D2526C948F419E594CE0A7BF735256DC9478AEEA5D25C6A2BB27C79B4DEF",
+    "family_abm/family/relationships.py": "99481FC82DCFD60DD6C8805771F276102862106AA825DB2D3535EA63E3A75353",
+    "family_abm/family/roles.py": "EC42C3CF2B52F11AB5C4C49C9710B4452F95A9960F86367D0DA92C65E6DE4393",
+    "family_abm/niche/micro_niche.py": "70D5FEDC4D14B84E1F62952781F5419F5A777AAF495158E49CF4F60C4C9880D0",
+    "family_abm/niche/resources.py": "999D568B65D9F5D326F580C90A0089E8FBDEBDF68F51BE9D3E6E229B6B6A3A73",
+    "family_abm/niche/influence.py": "188C7D595C142C5723D0F1904988651104CDF10DB742A89851A8AD871543FFEF"
+  },
+  "method": [
+    "python -X utf8 -m pytest tests/test_influence.py -q  -> 28 passed (regression baseline, exit 0)",
+    "probe1: 2 households (Smith 42/40/12, Jones 35/8), seed=42, 300 steps, LogRNG proxy + pre_step/post_step snapshots; replayed every member-step from real step-initial states + recorded RNG draws to reconstruct pre-clamp values. Mirror reproduced all 1500 member-steps to max|diff|=2.2e-16 => clamp census is exact, not inferred.",
+    "probe2/3/4/5: ablations (influence_strength/role_switch/use_life_stage_susceptibility/susceptibility_scale/income_support), sibling share, members-dict reorder, registration-order variant, relation_to_head variant, niche dimension/NaN/resource checks.",
+    "grep census over family_abm/, tests/, examples/, experiments/, tools/ for every symbol claimed dead (call-site counts below)."
+  ],
+  "verdict": {
+    "question": "家庭层现在是否真的是一个作用单元？",
+    "answer": "部分成立：从'纯命名空间'变成了真作用单元，但只有两条因果通道，且都带硬编码/静默失效边界。",
+    "causal_paths_verified": [
+      "Household.step 计算 total_income -> economic_pressure -> 写入每个成员 -> FamilyMember.step 的 stress 方程读取（family_member.py:244-248）。实测因果：income_support 0→0.5→1.0→3.0 使 pressure 0.6766→0.5149→0.3532→0.0000、子代 stress 0.6718→0.5933→0.5148→0.3355（同一 seed）。这是唯一由 Household 自身状态驱动的通道。",
+      "Relationship.trust/affection/conflict -> source_weight -> 未成年子代 happiness。实测：把关系设为 trust=1/conflict=0 与 trust=0.1/conflict=0.5，子代 happiness 轨迹最大差 0.029405（相对关闭影响基线：0.146677 vs 0.120092）。Relationship 不再是纯随机游走。"
+    ],
+    "not_causal": [
+      "Household 的 savings/housing_quality/neighborhood_quality/cultural_level/social_capital 六个状态中 5 个在 300 步内恒为常量（0.0/0.5/0.5/0.5/0.5），无任何动力学读取。",
+      "成员状态 -> Household 无反向通道（pressure 只依赖 previous-step income/education/age，stress/happiness 不回写）。无自反馈环，但也没有'家庭氛围->成员'的双向耦合。",
+      "影响通道在成员满 18 岁那一步被硬性切断（实测 received 从 0.005263 一步跌到 0.000000），且来源养育存量 1%/步衰减、无回充（300 步后剩 3.9%），因此机制在第二个十年基本失效：子代 happiness 相对关闭影响基线的偏差从 0-20 步的 0.140119 衰减到 160-180 步的 0.000057。"
+    ]
+  },
+  "findings": [
+    {
+      "id": "B1",
+      "severity": "P1",
+      "title": "relation_to_head 传角色词（'parent'/'child'）会静默关闭整个代际影响机制",
+      "evidence": [
+        "family_abm/family/influence.py:59 INFLUENCE_RELATION_TYPES = (\"member\", \"generic\")；:159-160 `if getattr(relationship, \"relation_type\", \"\") not in INFLUENCE_RELATION_TYPES: return 0.0`",
+        "family_abm/family/household.py:51 `def add_member(self, member, relation_to_head: str = \"member\")`；:74-82 把该字符串写进 Relationship.relation_type",
+        "实测（probe5 M2，seed=42, 20 步）：relation_to_head='member' -> source_weight=0.485640, 子代 max|influence_received|=0.075405；'generic' -> 0.512914/0.075407；**'parent' -> source_weight=0.000000, max|recv|=0.000000；'child' -> 0.000000/0.000000**",
+        "而 'parent'/'child' 正是 FamilyMember(role_name=...) 的文档词表（family_member.py:76-79、README:234 表、Web 下拉框），全仓库 45 处 add_member 调用都恰好没传该参数（grep add_member( 命中 45 处），因此该陷阱只在用户手写时触发，且无任何告警"
+      ],
+      "impact": "用户按角色词表配置家庭（add_member(child, relation_to_head='child')）后，README 的头号机制（代际影响）整条静默失效：influence_received 恒为 0，子代 happiness 与关闭该机制完全一致，但 summary/记录里 influence/susceptibility 状态照常存在，看起来'机制在跑'。属于'静默产生错误结论'。",
+      "minimal_fix": "在 Household.add_member 中把 relation_to_head 与 INFLUENCE_RELATION_TYPES 解耦：关系类型单独参数化并校验（未知类型 raise），或让 source_weight 对未知类型回退到通用权重并 warnings.warn 一次；至少在 add_member 里对不在 INFLUENCE_RELATION_TYPES 的值发警告。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "influence.py:59/159-160 与 household.py:51/74-82 均未被未提交 diff 触碰（diff 只改了 apply_influence 内的 or 兜底）"
+    },
+    {
+      "id": "B2",
+      "severity": "P1",
+      "title": "niche 维度顺序不同时距离/重叠度算错（位置字典完全相同却 distance=0.906）",
+      "evidence": [
+        "family_abm/niche/micro_niche.py:22-23 get_position_vector 按各自的 self.dimensions 顺序取值；:29 `np.linalg.norm(v1 - v2)`；:39-41 overlap 用 len(self.dimensions) 归一",
+        "实测（probe3 K3）：a=MicroNiche('a',['economic','cultural','social','emotional']) 位置 {0.9,0.1,0.5,0.4}；c=MicroNiche('c',['emotional','social','cultural','economic']) 逐维字典与 a 完全相同 -> a.distance_to(c)=0.9055385138137417、a.overlap(c)=0.5472307430931291（期望 0 / 1.0）",
+        "实测：4 维 vs 2 维 -> ValueError: operands could not be broadcast together with shapes (4,) (2,)",
+        "dimensions 是公开参数，examples/fitting_viz_demo.py:88-89 显式传 4 维列表；viz/plots.py:138 接收 dict[str, MicroNiche]"
+      ],
+      "impact": "只要两个 MicroNiche 的 dimensions 列表顺序不同（或长度不同），距离/重叠度就是错的或直接崩；由 overlap 派生的 resource_exchange_efficiency、聚类与可视化结论随之错误，且不报错。上一轮报告已提出，本轮在当前 HEAD 复现，未修复。",
+      "minimal_fix": "distance_to/overlap 先按维度名取交集并对齐（或要求 self.dimensions == other.dimensions 否则 raise）；overlap 的归一化用共享有效维度数；cosine 分支返回的是距离，应改名或让 overlap 显式处理。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "micro_niche.py 相对 HEAD 无改动（git status 干净）"
+    },
+    {
+      "id": "B3",
+      "severity": "P1",
+      "title": "Resource.transfer_to 违反守恒（目标满容量时资源凭空消失），返回值还高估实际转移量",
+      "evidence": [
+        "family_abm/niche/resources.py:12-15 add 受 capacity 截断但返回实际加入量；:17-20 remove；:22-25 `removed = self.remove(amount); other.add(removed); return removed`（忽略 other.add 的截断）",
+        "实测（probe2 H10）：EmotionalCapital(1.0).transfer_to(EmotionalCapital(1.0), 0.5) -> returned=0.500，但 a=0.500 b=1.000，总量 1.500（原 2.0，凭空丢失 0.5）",
+        "实测：EconomicCapital(1.0).add(-5.0) -> -4.0；SocialCapital(1.0).remove(-3.0) -> 4.0（突破 capacity=1.0）",
+        "grep：transfer_to 在 family_abm/ 内 0 个调用点（仅定义 + repr），resource_exchange_efficiency 在 family_abm/、tests/、examples/、experiments/、tools/ 内 0 个调用点"
+      ],
+      "impact": "该原语是 niche 层唯一的资源分配接口，语义（返回实际转移量）与行为不符、且不守恒；一旦接入 MicroNiche 资源交换，账目会系统性丢失资源。当前无调用方，故影响面是潜在的。上一轮已报，未修复。",
+      "minimal_fix": "先算目标可接收量再扣减源（或先 add 后按实际加入量 remove 并回滚差额）；add/remove 拒绝负数量；ResourceBundle.get 对未知 key 报错。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "resources.py 相对 HEAD 无改动"
+    },
+    {
+      "id": "B10",
+      "severity": "P2",
+      "title": "set_position/update_from_agent_state 静默吞掉 NaN 与缺失键（NaN 被饱和为 1.0）",
+      "evidence": [
+        "family_abm/niche/micro_niche.py:18-20 `self.position[dimension] = max(0.0, min(1.0, value))`；Python 中 `min(1.0, float('nan')) == 1.0`（nan < 1.0 为 False），故 NaN -> 1.0",
+        "实测（probe2 H10）：MicroNiche('z').set_position('economic', nan) -> position['economic'] == 1.0；未知维度名被 :19 的 `if dimension in self.dimensions` 静默丢弃",
+        "family_abm/niche/micro_niche.py:55-57 `if agent_key in agent_state and niche_key in self.dimensions` —— 缺失键静默跳过",
+        "实测路径差异（probe2 H9）：成员 state 路径（无 social_capital 键）-> social=0.5；web/app.py:429-434 与 examples/fitting_viz_demo.py:92-98 走的 DataFrame 路径（列存在但值为 NaN）-> social=1.0",
+        "对照：probe1 E 显示 300 步内 Household 的 social_capital 恒 0.5、成员行该列为 NaN（两类 agent 状态列完全不重叠）"
+      ],
+      "impact": "同一份数据经两条官方路径得到不同的 niche 坐标（0.5 vs 1.0）；NaN 静默变成区间上界会让'数据缺失'变成'该维度最大'，且无警告。指向常量维度的拟合/聚类结论因此不可复现。",
+      "minimal_fix": "set_position 对非有限值 raise/warn 后再夹取；update_from_agent_state 对维度列表内但缺失的键发警告或报错；Web/示例路径不要用 `.get(col, 0.5)` 吞 NaN。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "micro_niche.py 无改动"
+    },
+    {
+      "id": "B11",
+      "severity": "P2",
+      "title": "INFLUENCE_DECAY 的'存量<=0 就重置为 0.8'规则会静默回充用户显式清零的影响力",
+      "evidence": [
+        "family_abm/family/influence.py:285-289 `stock = float(member.get_state_value(\"influence\", 0.0)); if stock <= 0.0: stock = initial_influence_stock(age); stock *= (1.0 - INFLUENCE_DECAY)`",
+        "实测（probe5 M3，seed=3）：dad(45) set_state_value('influence', 0.0) -> 运行 1 步后变为 0.792；设为 0.3 再跑 3 步 -> 0.291090（正常单调衰减）",
+        "该分支本意是'刚跨过 18 岁的成员给予初始养育能力'（docstring :270-276），但无法区分'刚成年'与'被显式清零'"
+      ],
+      "impact": "任何想通过 influence=0 关闭某个成年成员影响力的操作（含敏感性实验的对照条件）会在下一步被静默改回 0.8；同时使存量演化非单调，破坏'能力随投入消耗'的叙事。",
+      "minimal_fix": "用显式标记区分'尚未初始化'（如独立状态 influence_initialized 或按 age 首次跨阈值检测）与'存量为 0'，不要用 `<= 0` 作为触发条件；或把初始存量只在成员跨过 ADULTHOOD_AGE 的那一步赋予。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "influence.py:285-289 的 stock<=0 重置在 HEAD 中即存在（diff 仅删除 `or 0.0`）"
+    },
+    {
+      "id": "B12",
+      "severity": "P2",
+      "title": "'家庭层无因果'只修了一半：roles.py 与 5 个 Household 状态量、2 个 Relationship 字段仍无消费者",
+      "evidence": [
+        "ROLE_REGISTRY：定义于 roles.py:53-58；family_abm/ 内 0 个读取点（family/__init__.py:4 与 family_abm/__init__.py:15 只导入 Role 类），tests/、examples/、experiments/、tools/ 内 0 命中",
+        "Role/ParentRole/ChildRole/AdultRole/ElderRole：仅被导入/导出，全仓库 0 次实例化；Role.get_decision_weight（roles.py:10-11）0 个调用点",
+        "Household 状态 savings/housing_quality/neighborhood_quality/cultural_level/social_capital（household.py:37-41）：family_abm/ 内唯一出现是写入点，无任何动力学读取（social_capital 仅被 web/app.py:432 与 examples 当 DataFrame 列读取）；实测 300 步内恒为 0.0/0.5/0.5/0.5/0.5",
+        "Relationship.power_dynamics（relationships.py:47=0.5）：无写入点，只在 :70 参与 influence_weight，恒为 0.5 -> 权重退化为 trust*0.4+0.2+affection*0.2，direction 无意义；实测两方向权重相同（上一轮 E13 0.467293/0.467293）",
+        "Relationship.communication_quality（:48）：只有初始化与 :86 序列化，无任何更新/读取；Relationship.get_other_id（:65）0 调用；Household.get_member_relationships（household.py:110）0 调用；Relationship.get_state（:78）0 调用",
+        "已修复的部分（本轮新接线，实测有效）：Relationship.influence_weight 现有 1 个生产调用点 family_abm/family/influence.py:161；Household.total_income 现在被 :157 读取用于 economic_pressure；实测 income_support 0->3 使子代 stress 0.6718->0.3355"
+      ],
+      "impact": "对外仍呈现'角色体系 + 权力不对称 + 沟通质量 + 住房/文化资本'的模型外观，但这些量：不进任何方程、恒定、却逐行写入 recorder 的 DataFrame，并被 ML 特征矩阵与 Web 拟合端点当作可用列消费（常量列）。用户据此做的'角色/资本影响'解释没有实现依据。",
+      "minimal_fix": "要么接线（power_dynamics 由 Role.get_decision_weight 派生、communication_quality 参与 influence_weight、savings/housing/cultural_level 进入 happiness/stress 或 income 乘数），要么删除并把 README 的模型描述降级为'聚合视图'；同时把常量状态列从 ML/拟合的可用列中排除。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "roles.py / niche/* 相对 HEAD 无改动；savings/housing_quality/neighborhood_quality/cultural_level 在 HEAD household.py:36-40 即存在；power_dynamics/communication_quality/get_other_id/get_member_relationships 在 HEAD 中即无消费者"
+    },
+    {
+      "id": "B4",
+      "severity": "P2",
+      "title": "代际影响的预计算不是'步初状态的纯函数'：同一家庭仅改变 members 字典顺序即可改变影响量与 happiness",
+      "evidence": [
+        "family_abm/family/influence.py:292-316 prepare_received_influence 逐个成员调用 apply_influence；:209-213 成年成员在 apply_influence 内先执行 _decay_own_stock（改写自己的 influence 存量）；:238 子代随后读取 source.get_state_value(\"influence\")",
+        "因此来源存量是否已被本步衰减，取决于它是否排在受力者之前 —— 与 docstring influence.py:300-303 及 README:341 '影响量在每步开始前按步初状态预计算' 的说法不符",
+        "实测（probe3 K1，单次预计算）：家庭 [A1(40,0.9), A2(18.0,存量0), B(10,0.3)]，顺序 [A1,A2,B] -> B 收到 0.175；顺序 [B,A1,A2] -> B 收到 0.300，相对差 71.4%",
+        "实测（probe4，真实 300 步，仅重排 hh.members 字典、env 顺序与关系种子不变）：teen=17.5 岁（第 8 步跨 18）时，kid 的 influence_received 在该步为 0.002868 vs 0.022033（差 0.019165），kid happiness 逐点最大差 0.019165（happiness 全区间 0.335-0.668，约占 6%）；teen=18.5（起始即成年）时差为 0",
+        "实测（probe4 K2c，5 人家庭含 1 名跨 18 岁成员，200 步）：k1 max|Δrecv|=0.002308，k2 max|Δ|=0.002405"
+      ],
+      "impact": "机制的数值结果依赖成员加入顺序（一个用户不可见、文档明确否认的输入）。默认构建顺序下子代总是读到'已提前衰减一步'的来源存量；而在来源刚满 18 岁（存量 0->0.8）的那一步，子代可能完全读不到该来源。规模是个位数百分比量级的单步扰动，但对'同一配置必须同一结果'的因果解释是破坏性的，且会让消融/敏感性实验的对照不干净。",
+      "minimal_fix": "在 prepare_received_influence 中先把所有成年成员的存量按同一时点衰减（或先快照 stocks 再用快照计算），使影响量只依赖步初状态；或把存量衰减移出 apply_influence，单独在 Simulation 的固定阶段执行。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "prepare_received_influence / _decay_own_stock 的迭代与就地衰减逻辑在 HEAD 中即存在；未提交 diff 只改 or 兜底，不改变顺序依赖"
+    },
+    {
+      "id": "B5",
+      "severity": "P2",
+      "title": "is_influencing 的 docstring 声称'子代成年后反过来影响父母'，实现上不可能",
+      "evidence": [
+        "family_abm/family/influence.py:125 docstring：'开启后，成年成员转为施加影响（子代成年后反过来影响父母）'；:127 `return bool(role_switch) and age >= ADULTHOOD_AGE`",
+        "family_abm/family/influence.py:209-213：`if household is None or strength <= 0.0 or adult_side:` -> 成年成员直接 return 0.0，永不接收影响",
+        "family_abm/family/influence.py:142-145 select_sources 只收 `other_age > my_age` 的来源，父母比子代年长，即便子代成年也不会成为父母的来源",
+        "实测（probe1 F）：3 名成年成员在 300 步内 influence_received 非零次数 = 0/0/0；子代收到的非零步数恰为 72（12->18 岁）与 120（8->18 岁），即只在 18 岁前",
+        "README.md:327-329 的'局限'章节是诚实的（明确写'尚无对象（其父母不再被影响）'），矛盾只存在于该 docstring 与 README:19 的特性表述"
+      ],
+      "impact": "API 级 docstring 与实现不符，会让读者以为存在双向代际影响；基于'角色反转'设计的实验条件（如让成年子代影响父母）实际测到的是零效应。",
+      "minimal_fix": "修正 is_influencing docstring（成年=施加影响一方，但不接收也无可影响的上级）；或在 select_sources 中允许'更年轻的成年子代影响年长父母'并在 apply_influence 中去掉 adult_side 早退（需同时改 share/来源逻辑，属功能变更）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "is_influencing 及其 docstring（influence.py:121-127）未被未提交 diff 触碰；family_member.py 的 role/stage 改动不影响该结论"
+    },
+    {
+      "id": "B6",
+      "severity": "P2",
+      "title": "经济压力的读写时序：首步出现 pressure=1.0 的人为冲击，且整条时序依赖家庭/成员的注册先后",
+      "evidence": [
+        "family_abm/family/household.py:146-150 total_income 由成员 income 求和（recommended 顺序下 Household 在 scheduler 中先于成员步进，读到的是**上一步**的 income）；:156-161 计算并回写 economic_pressure",
+        "成员侧 family_member.py:244-248 在同一步内读取 economic_pressure",
+        "实测（probe1）：t=0 记录 pressure=0.0；**t=1 所有成员 pressure=1.0（最大值）**，t=2 起 0.6872/0.6865，t=100 0.6585，t=299 0.7115 —— 首步冲击源于成员 income 在构造时被初始化为 0（family_member.py:118），Household 第 1 步读到 0",
+        "实测（probe2 H6，同一 seed/config，仅改注册顺序）：[Household 先] agent 顺序 H,F,F,F -> pressure t=0..3 = [0, 1.0, 0.7043, 0.7021]，子代 stress t=1..3=[0.2181,0.2467,0.2755]；[成员先] 顺序 F,F,F,H -> pressure=[0, 0.7043, 0.7021, 0.6982]，stress t=1..3=[0.1841,0.2150,0.2457]；两条 stress 轨迹逐点最大差 0.034000（子代 stress 全区间 0.17-0.71，约 6%）",
+        "environment.py:50-57 docstring 只声明两种构建顺序在'成员不会被静默漏步'意义上等价，未声明动力学等价"
+      ],
+      "impact": "同一个名义模型因注册顺序不同产生不同轨迹（成员是否经历首步 1.0 压力、以及压力相对收入的滞后是 1 步还是 0 步）；首步的 pressure=1.0 是一个无物理含义的初始化假象，会让任何按时间对齐的分析看到虚假的初始压力尖峰。",
+      "minimal_fix": "把 income 的初始化改为按年龄/教育算出的稳态值（或在第 1 步之前先跑一次 Household 聚合）；在 Simulation 中把'家庭聚合'固定为一个显式阶段（如 _prepare_household_aggregates，与 _prepare_influence 并列），使压力时序不依赖 agents 插入顺序；并在文档中写明压力对收入滞后 1 步。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "household.py 的 step()/pressure 逻辑未被未提交 diff 触碰（diff 只涉及 docstring 与 add_member）"
+    },
+    {
+      "id": "B7",
+      "severity": "P2",
+      "title": "happiness 目标使用未回夹的本地 income/health：子代 income 被存储夹为 0，但负的原始收入仍进入 happiness",
+      "evidence": [
+        "family_member.py:210-212 `income = base*...*role_mul; income += rng(0, noise*base); self.set_state_value(\"income\", max(0.0, income))` —— 局部变量 income 未回夹",
+        "family_member.py:224-232 `hp = floor + ...; hp += rng(0, noise*0.3); set_state_value(\"health\", max(0.01, min(1.0, hp)))` —— 局部变量 hp 未回夹",
+        "family_member.py:255-256 happiness 目标使用 `P[\"happiness_health_weight\"] * hp` 与 `P[\"happiness_income_weight\"] * min(1.0, income*3)` = **未夹**值；:258 的压力惩罚却用步初 st",
+        "镜像复算（probe1 C）：必须用未回夹的 hp/income 才能逐点复现真实轨迹，用夹后值则 1500/1500 步全部不匹配 —— 证明源代码确实消费了未夹局部变量",
+        "实测钳位普查（probe1 D，1500 member-steps，seed=42, 300 步）：income raw<0 共 96 次（6.40%，raw 最低 -0.005930，全部发生在 18 岁前 role_mul=0 的未成年成员上）；health raw>1 共 1 次（0.07%，raw 1.000354）；education/stress/happiness/energy 的钳位次数均为 0"
+      ],
+      "impact": "状态量与其在方程中的取值不一致：子代记录到的 income 恒为 0，但 happiness 目标里带一个负的收入项（幅度 ≤0.0044）；健康同理。数值影响小，但破坏了'状态即真值'的契约，参数放大（randomness 调大）时会同步放大，也让任何基于 income 的下游解释与实际驱动量不符。",
+      "minimal_fix": "在 set_state_value 之前把局部变量回夹（`income = max(0.0, income)` / `hp = max(0.01, min(1.0, hp))`），使方程消费的状态与存储值一致；或在文档中显式声明 happiness 用的是'未截断潜变量'。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "family_member.py:210-212/224-232/255-256 未被未提交 diff 触碰"
+    },
+    {
+      "id": "B8",
+      "severity": "P2",
+      "title": "来源养育存量无回充：300 步衰减到初值的 3.9%，机制在第二个十年基本失效",
+      "evidence": [
+        "family_abm/family/influence.py:50 INFLUENCE_DECAY = 0.01；:288 `stock *= (1.0 - INFLUENCE_DECAY)`；无任何增长/回充项",
+        "实测（probe1）：Father/Mother/Mom 的 influence 从 t0=0.792 线性指数衰减到 t299=0.0392（=0.8*0.99^300）；probe5 M4 计算：60 步 0.4377、120 步 0.2395、300 步 0.0392、600 步 0.0019",
+        "实测（probe2 H3，子代 happiness 相对 influence_strength=0 基线的逐段最大差）：steps 0-20: 0.140119；40-60: 0.124038；80-100: 0.044877；120-140: 0.001598；160-180: 0.000057",
+        "实测：同一家庭里 12 岁入场的子代在 t299 的存量 0.0809，而 t0 即成年者为 0.0392 —— 存量只取决于'入场时刻 + 已跑步数'，不存在稳态"
+      ],
+      "impact": "机制强度是仿真时长的单调函数：跑得越久影响越小，长程（>25 年）仿真里父母对子代的影响通道事实上关闭，'早期影响在成年后仍可分辨'一类结论无法由该通道支撑（实测 160 步后偏差已降到 5.7e-5）。同时，成员之间的相对影响力取决于入场时机而非角色/关系，跨成员的存量不具可比性。",
+      "minimal_fix": "给存量加回充/稳态（如 `stock += (stock_target - stock)*renew`，或让衰减与养育投入挂钩），或把 INFLUENCE_DECAY 改为与 dt 和时长无关的稳态形式；至少在文档中写明该机制是'有限时长'的并给出时间常数（README 未给）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "INFLUENCE_DECAY/_decay_own_stock 的衰减结构在 HEAD 中即存在"
+    },
+    {
+      "id": "B9",
+      "severity": "P2",
+      "title": "niche 四维量纲不统一且 social 维恒定，重叠度几乎无区分度",
+      "evidence": [
+        "family_abm/niche/micro_niche.py:48-57 默认映射 income->economic、education->cultural、social_capital->social、happiness->emotional；:18-20 set_position 只做 [0,1] 夹取，无归一化",
+        "实测（probe2 H9，5 名成员最终状态）：直接传成员 state -> mean=[0.0810, 0.7449, 0.5000, 0.4844]，std=[0.0349, 0.0564, 0.0000, 0.0539]；走 Web/examples 路径（NaN）-> social 恒为 1.0，其余同上",
+        "实测 income 范围 0.0189-0.1209，而 education 0.0642-0.8396、happiness 0.335-0.668 —— 三维量纲/区间差异约一个数量级",
+        "实测 10 组成对 (distance, overlap)：d∈[0.0623,0.1885]、overlap∈[0.9057,0.9688]（overlap 的理论可达区间是 [0,1]）",
+        "FamilyMember 没有 social_capital 状态（household.py:37-41 只在 Household 上设置），故成员路径 social 恒 0.5、Web 路径恒 1.0（见 B10）"
+      ],
+      "impact": "'四维社会空间'实际只有约两维有效变异（economic 尺度被压缩、social 恒定）；overlap 恒 >0.9 使'生境重叠/隔离'的结论失去判别力，任何基于 overlap 的聚类或资源交换都是常数效应。README:333 已承认 social 维不完整，但未处理量纲与 overlap 归一化。",
+      "minimal_fix": "对每个维度做显式归一化（income 用 min-max/分位数映射到 [0,1] 并在文档写明区间）；为成员派生 social_capital（如关系网络度数/信任均值）；overlap 用'实际方差>0 的有效维度数'归一，或在标准化后的空间上计算。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "micro_niche.py 无改动；Household 的 5 个常量状态在 HEAD household.py:36-41 即存在"
+    },
+    {
+      "id": "B13",
+      "severity": "P3",
+      "title": "模块头声明的'有限记忆累积存量'机制不存在：INFLUENCE_MEMORY 定义后无任何使用",
+      "evidence": [
+        "family_abm/family/influence.py:20 模块 docstring：'影响是**有限记忆的累积存量**，不是无限累加，否则数值会随仿真步数线性增长'；:44-45 `# 影响存量的记忆系数：每步保留的比例。0.9 对应约 10 步的时间常数。 INFLUENCE_MEMORY = 0.90`",
+        "grep INFLUENCE_MEMORY 于 family_abm/：仅命中 :45 定义处，0 个使用点；真正生效的是 :50 INFLUENCE_DECAY=0.01（:288）",
+        "实情：influence_received 每步直接被加到 happiness（family_member.py:273-276），没有任何跨步记忆项；唯一的'存量'是来源的 influence 能力值"
+      ],
+      "impact": "文档与实现不符：读者会以为存在记忆/累积机制并据此解释时滞，实际没有任何记忆项；同时暴露'文档承诺的机制被换掉'的维护风险。",
+      "minimal_fix": "删除 INFLUENCE_MEMORY 并修正模块 docstring；若确实需要记忆项，则在 happiness 更新中实现（如 received 累加到 influence_received_stock 并按 0.9 衰减）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "INFLUENCE_MEMORY（influence.py:45）在 HEAD 中即定义且未被使用"
+    },
+    {
+      "id": "B14",
+      "severity": "P3",
+      "title": "susceptibility 状态对成年成员永久冻结，却被记录与序列化",
+      "evidence": [
+        "family_abm/family/influence.py:225 `member.set_state_value(\"susceptibility\", openness)` 位于 :209-213 的成年早退分支之后，成年成员永不执行到",
+        "实测（probe2 H2，300 步）：m0（成年）unique values=1，首值=末值=0.1000，std=0；m1 unique=1（0.1250）；只有未成年成员会更新（m2 unique=24，0.3900->0.2204）",
+        "probe1 E：state_susceptibility 全体 min=0.1000 max=0.5000，而这些极值正是成年成员的构造值"
+      ],
+      "impact": "recorder/Web/实验把 susceptibility 当作时变状态展示与使用（experiments/mechanism_validation.py:160、life_stage_reducibility.py:192 都在用它），成年成员的该列是常量、且与'当前年龄对应的易感性'不符（例如 67 岁成员仍写着 susceptibility(42)）。",
+      "minimal_fix": "把 susceptibility 的写入移到成年早退分支之前（每步都按当前年龄刷新），或在文档中明确该状态仅对'接受影响方'有意义并从成年行中剔除。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "influence.py:225 的位置与 :209-213 早退分支的相对关系未被未提交 diff 触碰"
+    },
+    {
+      "id": "B15",
+      "severity": "P3",
+      "title": "死函数与重复常量：_household()/_params_dict()/life_stage_of 等无生产调用点，initial_influence_stock 硬编码 0.80",
+      "evidence": [
+        "family_member.py:146-151 `_params_dict()`：全仓库 0 个调用点（grep `_params_dict` 仅命中定义）",
+        "family_member.py:153-162 `_household()`：0 个调用点（grep `_household` 仅命中实验里的同名局部变量与定义）—— 且实现为遍历全部 agents 的 O(N) 扫描，一旦被调用会成为性能陷阱",
+        "family_abm/family/influence.py:71-73 `life_stage_of` 与 :62-68 `stage_for_age`：生产代码 0 调用（grep 全部命中都在 influence.py 自身与 tests/test_influence.py:74-77），docstring 声称'供分段拟合与分组统计使用'但无人使用",
+        "family_abm/family/influence.py:168 `return 0.80 if age >= ADULTHOOD_AGE else 0.0` 硬编码 0.80，而 :56 已定义 INITIAL_INFLUENCE = 0.80（同一常量两处）",
+        "family_abm/niche/influence.py 的 InfluenceRelation：family_abm/ 内 0 次实例化（family_abm/__init__.py:32 与 niche/__init__.py:1 只导入导出；examples/ml_ready.py:9 导入但未使用）"
+      ],
+      "impact": "维护成本与误导：读者会以为存在分组统计/参数快照/概念性影响关系模型，实际都是死代码；两个 0.80 会在改动时漂移。",
+      "minimal_fix": "删除无调用点的私有方法与 life_stage_of（或补上调用方）；initial_influence_stock 改用 INITIAL_INFLUENCE；为 niche.InfluenceRelation 补上调用方或删除并在 README:181 的目录说明中移除。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "_params_dict/_household（family_member.py:146-162）、life_stage_of/stage_for_age（influence.py:62-73）在 HEAD 中即无生产调用点；initial_influence_stock 的硬编码 0.80 未被改动"
+    },
+    {
+      "id": "B16",
+      "severity": "P3",
+      "title": "默认 income_baseline 与可实现收入不匹配：压力恒 >0，注释中的均衡值也与代码不符",
+      "evidence": [
+        "family_member.py:44 `\"income_baseline\": 0.25`；实测成员 income 区间 0.0-0.1307（probe1 E state_income），理论上限 = income_base*(1+0.4*1)*1.0*1.0 = 0.1400",
+        "实测（probe5 M5）：两名 45 岁成员、无子女的家庭 total_income=0.2459、人均 0.1230、pressure=0.5082 —— 收入峰值附近压力仍 >0.5；probe1 F：Smith 户 pressure 全程 0.659-0.711（仅首步 1.0），从未接近 0",
+        "Household._p(\"income_baseline\", 0.08)（household.py:156）的 0.08 兜底永不生效：:137 先查 DEFAULT_PARAMS.get(key, default)，0.25 优先",
+        "family_member.py:19-21 注释声称 stress 均衡 ≈0.31（成人）/0.17（儿童）；按代码计算 = (base+work)*(1+sens*neuro)/decay：成人 (0.012+0.008)*1.15/0.06=0.3833、儿童 (0.012+0.005)*1.15/0.06=0.3258（neuro=0.5）；实测（含压力项）300 步均值 0.5204、区间 0.1717-0.7147"
+      ],
+      "impact": "名为'低于基准才产生压力'的机制实际长期处于半饱和（0.5-0.7），使'经济压力'近似常数偏移而非可分辨的情景变量；注释给出的均衡值无法由代码复现，容易导致校准误判。",
+      "minimal_fix": "把 income_baseline 校准到可实现区间（如 0.12-0.15）并在文档给出'无压力'的临界收入；删除 household.py:156 的死兜底或将 DEFAULT_PARAMS 与兜底统一；修正 family_member.py:19-21 的均衡值注释（并说明其不含压力项）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "DEFAULT_PARAMS 的 income_baseline=0.25 与 family_member.py:19-21 注释、household.py:156 的 0.08 兜底均未被未提交 diff 触碰"
+    },
+    {
+      "id": "B17",
+      "severity": "P3",
+      "title": "测试判别力缺口：'成年人不被孩子影响'的测试是恒真的，尚未验证真实性质",
+      "evidence": [
+        "tests/test_influence.py:157-162 `assert select_sources(members[0], hh) == [] or all(s.get_attribute(\"age\") >= 18 for s in select_sources(members[0], hh))` —— members[0] 是家庭中最年长者，select_sources 必然为空，右侧 `or` 使断言恒真；该测试不检验 apply_influence 对成年人的行为",
+        "tests/test_influence.py:223-245 兄弟姐妹分摊只用 `two < one` 单向比较（实测恰为 1/n：0.075414/0.037707/0.025138，更强断言可用 pytest.approx(one/2)）",
+        "tests/test_influence.py:178-191 `abs(strong-off) >= abs(weak-off)*0.5` 不检查单调性（更大强度理论上应产生更大偏离）",
+        "本轮独立实测补齐了这些性质：3 名成年成员 300 步内 influence_received 非零次数 0；分摊比恰为 1/n；strength 0/0.5/2.0 的偏离为 0 / 0.028 / 0.140（单调）"
+      ],
+      "impact": "该回归测试对'角色反转/成年人接收'这类核心性质零判别力，未来若引入成年人接收 bug 不会红灯。",
+      "minimal_fix": "改为直接断言成年成员 influence_received == 0（跑若干步），并把兄弟姐妹分摊断言改为 two == pytest.approx(one/2)、three == pytest.approx(one/3)。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "已用 `git show HEAD:tests/test_influence.py` 核实：恒真断言 test_adults_are_not_influenced_by_children 存在于 HEAD（未提交 diff 只新增了其它测试）"
+    }
+  ],
+  "dead_code_census": [
+    {
+      "symbol": "ROLE_REGISTRY",
+      "def": "family_abm/family/roles.py:53-58",
+      "consumers": [],
+      "call_sites": 0,
+      "note": "仅 tests/examples/experiments/tools/family_abm 全 0 命中（family/__init__.py 与 family_abm/__init__.py 只导入 Role 类）",
+      "verdict": "dead"
+    },
+    {
+      "symbol": "Role / ParentRole / ChildRole / AdultRole / ElderRole",
+      "def": "family_abm/family/roles.py:4-50",
+      "consumers": [
+        "family_abm/family/__init__.py:4 (re-export)",
+        "family_abm/__init__.py:15 (re-export)"
+      ],
+      "call_sites": 0,
+      "note": "0 次实例化",
+      "verdict": "dead"
+    },
+    {
+      "symbol": "Role.get_decision_weight",
+      "def": "family_abm/family/roles.py:10-11",
+      "consumers": [],
+      "call_sites": 0,
+      "verdict": "dead"
+    },
+    {
+      "symbol": "Relationship.influence_weight",
+      "def": "family_abm/family/relationships.py:68-71",
+      "consumers": [
+        "family_abm/family/influence.py:161"
+      ],
+      "call_sites": 1,
+      "note": "本轮已接线（上一轮为 0）；但 power_dynamics 恒 0.5、domain 形参仍被忽略",
+      "verdict": "live (partially useful)"
+    },
+    {
+      "symbol": "Relationship.power_dynamics",
+      "def": "family_abm/family/relationships.py:47",
+      "consumers": [
+        "relationships.py:70 (influence_weight)",
+        "relationships.py:85 (get_state)"
+      ],
+      "writers": 0,
+      "note": "恒 0.5；get_state 无调用者",
+      "verdict": "constant / dead state"
+    },
+    {
+      "symbol": "Relationship.communication_quality",
+      "def": "family_abm/family/relationships.py:48",
+      "consumers": [
+        "relationships.py:86 (get_state, 无调用者)"
+      ],
+      "updates": 0,
+      "verdict": "dead state"
+    },
+    {
+      "symbol": "Relationship.get_other_id",
+      "def": "family_abm/family/relationships.py:65-66",
+      "call_sites": 0,
+      "verdict": "dead"
+    },
+    {
+      "symbol": "Relationship.get_state",
+      "def": "family_abm/family/relationships.py:78-88",
+      "call_sites": 0,
+      "verdict": "dead"
+    },
+    {
+      "symbol": "Household.savings / housing_quality / neighborhood_quality / cultural_level",
+      "def": "family_abm/family/household.py:37-40",
+      "consumers": [],
+      "dynamics_reads": 0,
+      "note": "300 步实测恒 0.0/0.5/0.5/0.5；仅出现在 recorder 的 DataFrame 与 ML/拟合的可用列中",
+      "verdict": "dead state (but exposed as data)"
+    },
+    {
+      "symbol": "Household.social_capital",
+      "def": "family_abm/family/household.py:41",
+      "consumers": [
+        "family_abm/web/app.py:432 (DataFrame 列)",
+        "examples/fitting_viz_demo.py:97",
+        "family_abm/niche/micro_niche.py:52 (仅映射键)"
+      ],
+      "dynamics_reads": 0,
+      "note": "成员无该状态 -> 成员行 NaN；300 步恒 0.5",
+      "verdict": "dead in dynamics, constant in data"
+    },
+    {
+      "symbol": "Household.get_member_relationships",
+      "def": "family_abm/family/household.py:110-114",
+      "call_sites": 0,
+      "verdict": "dead"
+    },
+    {
+      "symbol": "FamilyMember._params_dict",
+      "def": "family_abm/family/family_member.py:146-151",
+      "call_sites": 0,
+      "verdict": "dead"
+    },
+    {
+      "symbol": "FamilyMember._household",
+      "def": "family_abm/family/family_member.py:153-162",
+      "call_sites": 0,
+      "note": "O(#agents) 扫描，一旦被调用会成为性能陷阱",
+      "verdict": "dead"
+    },
+    {
+      "symbol": "family.influence.life_stage_of / stage_for_age",
+      "def": "family_abm/family/influence.py:71-73 / 62-68",
+      "call_sites": 0,
+      "note": "tests/test_influence.py:74-77 调用 life_stage_of 作断言；生产 0",
+      "verdict": "dead in production (test-only)"
+    },
+    {
+      "symbol": "family.influence.INFLUENCE_MEMORY",
+      "def": "family_abm/family/influence.py:45",
+      "call_sites": 0,
+      "note": "模块 docstring:20 声称的记忆机制未实现",
+      "verdict": "dead constant"
+    },
+    {
+      "symbol": "niche.InfluenceRelation",
+      "def": "family_abm/niche/influence.py:6-42",
+      "consumers": [
+        "family_abm/__init__.py:32",
+        "niche/__init__.py:1",
+        "examples/ml_ready.py:9 (import 未用)"
+      ],
+      "instantiations": 0,
+      "verdict": "dead"
+    },
+    {
+      "symbol": "Resource.transfer_to",
+      "def": "family_abm/niche/resources.py:22-25",
+      "call_sites": 0,
+      "verdict": "dead (and non-conserving)"
+    },
+    {
+      "symbol": "MicroNiche.resource_exchange_efficiency / boundary_permeability",
+      "def": "family_abm/niche/micro_niche.py:43-46 / 16",
+      "consumers": [
+        "micro_niche.py:45 (self-use only)",
+        "micro_niche.py:64 (get_state)"
+      ],
+      "call_sites": 0,
+      "verdict": "dead"
+    },
+    {
+      "symbol": "MicroNiche.resources (ResourceBundle)",
+      "def": "family_abm/niche/micro_niche.py:15",
+      "consumers": [
+        "micro_niche.py:63 (get_state)"
+      ],
+      "updates": 0,
+      "note": "任意 update_from_agent_state 后仍全 0（实测）",
+      "verdict": "dead state"
+    },
+    {
+      "symbol": "MicroNiche.distance_to / overlap",
+      "def": "family_abm/niche/micro_niche.py:25-41",
+      "consumers": [
+        "examples/ml_ready.py:85-86"
+      ],
+      "note": "viz/plots.py 只读 position；Web /api/niche 只回传 position",
+      "verdict": "live only in examples (buggy, see B2)"
+    }
+  ],
+  "measurements": {
+    "run_config": "seed=42, 300 steps, 2 households (Smith: 42/40/12, Jones: 35/8), Simulation(scheduler=Scheduler('sequential'))",
+    "mirror_validation": "1500 member-steps replayed from real step-initial state + logged RNG draws; max|diff| = 2.22e-16; 0 mismatches (clamp census is exact)",
+    "rng_budget": "per 300-step run: 9035 gauss + 15 uniform events; construction consumes 35 gauss (25 x sigma0.15 personality + 10 x sigma0.05 init) + 15 uniform; each member-step consumes exactly 6 gauss with sigmas [0.006,0.002,0.006,0.01,0.01,0.004]",
+    "clamp_census_1500_member_steps": {
+      "income_raw_negative": "96 (6.40%), raw range [-0.005930, -0.000054], all on pre-adult members (role_mul=0)",
+      "health_raw_above_1": "1 (0.07%), raw 1.000354",
+      "education": 0,
+      "health_below_floor": 0,
+      "stress": 0,
+      "happiness_own": 0,
+      "energy": 0,
+      "influence_applied": "192 steps (12.8%) = exactly the pre-18 steps of the two children (72 + 120); 0 additional clamping from the influence term"
+    },
+    "state_ranges_300_steps": {
+      "state_education": [
+        0.064243,
+        0.839612
+      ],
+      "state_income": [
+        0.0,
+        0.130684
+      ],
+      "state_happiness": [
+        0.335114,
+        0.667654
+      ],
+      "state_health": [
+        0.516752,
+        1.0
+      ],
+      "state_stress": [
+        0.171735,
+        0.714708
+      ],
+      "state_energy": [
+        0.6026,
+        0.938998
+      ],
+      "state_influence": [
+        0.0,
+        0.8
+      ],
+      "state_susceptibility": [
+        0.1,
+        0.5
+      ],
+      "state_influence_received": [
+        -0.007821,
+        0.077628
+      ],
+      "state_economic_pressure": [
+        0.0,
+        1.0
+      ],
+      "state_total_income": [
+        0.0,
+        0.301013
+      ],
+      "state_savings": [
+        0.0,
+        0.0
+      ],
+      "state_housing_quality / neighborhood_quality / cultural_level / social_capital": [
+        0.5,
+        0.5
+      ],
+      "out_of_[0,1]_recorded_states": "0 except influence_received (a signed delta, not a bounded state)"
+    },
+    "economic_pressure_timing": {
+      "t0_recorded": 0.0,
+      "t1_all_members": 1.0,
+      "t2_onwards": "0.6585-0.7115 (Smith)",
+      "registration_order_variant": {
+        "household_first": "pressure t=1 -> 1.0; child stress t=1..3 = 0.2181/0.2467/0.2755",
+        "members_first": "pressure t=1 -> 0.7043; child stress t=1..3 = 0.1841/0.2150/0.2457",
+        "max_trajectory_diff_stress": 0.034
+      }
+    },
+    "influence_decay": {
+      "source_stock_t0": 0.792,
+      "t60": 0.437725,
+      "t120": 0.239504,
+      "t300": 0.039233,
+      "t600": 0.001924
+    },
+    "influence_effect_on_child_happiness_vs_strength0": {
+      "steps_0_20": 0.140119,
+      "steps_40_60": 0.124038,
+      "steps_80_100": 0.044877,
+      "steps_120_140": 0.001598,
+      "steps_160_180": 5.7e-05
+    },
+    "sibling_share": {
+      "1_child": 0.075414,
+      "2_children": 0.037707,
+      "3_children": 0.025138,
+      "ratio": "exactly 1/n"
+    },
+    "ablations": {
+      "role_switch_0_vs_1": {
+        "max_dhappiness": 0.07083,
+        "nonzero_recv_steps": "200 vs 72",
+        "note": "role_switch=0 同时改变成年人是否接收、分摊分母（全体成员 vs 未成年人）、来源是否可为未成年兄弟 —— 三重混淆"
+      },
+      "use_life_stage_0_vs_1": {
+        "max_recv": "0.096684 vs 0.075414"
+      },
+      "susceptibility_scale_0": {
+        "max_recv": 0.0,
+        "max_dhappiness": 0.140119
+      }
+    },
+    "relationship_causality": {
+      "good_vs_off": 0.146677,
+      "bad_vs_off": 0.120092,
+      "good_vs_bad_max": 0.029405,
+      "good_vs_bad_final": 0.014959
+    },
+    "niche_dimensions": {
+      "member_state_path_mean": [
+        0.081,
+        0.7449,
+        0.5,
+        0.4844
+      ],
+      "member_state_path_std": [
+        0.0349,
+        0.0564,
+        0.0,
+        0.0539
+      ],
+      "web_path_mean": [
+        0.081,
+        0.7449,
+        1.0,
+        0.4844
+      ],
+      "pairwise_overlap_range": [
+        0.9057,
+        0.9688
+      ],
+      "pairwise_distance_range": [
+        0.0623,
+        0.1885
+      ]
+    },
+    "e1_e4_cross_check": "susceptibility 单调性/连续性由 tests/test_influence.py 覆盖（28 passed）；本轮实测阶段曲线在边界连续（18 岁前后 0.220417），但 is_influencing 在 18 岁是硬 0/1 切换（received 一步 0.005263 -> 0.000000），与 influence.py:18-19 自己给出的'不用硬切换'理由相矛盾"
+  },
+  "round1_regressions": {
+    "fixed_since_round1": [
+      "Relationship.influence_weight 已接入动力学（1 个生产调用点）",
+      "Household.total_income 已被消费（household.py:157 -> economic_pressure -> 成员 stress）",
+      "stress/happiness 不再饱和到 1.0（300 步内 0 次钳位；区间 0.17-0.71 / 0.335-0.668），旧版 stress 均值 0.795、上限 1.0",
+      "health 触底 0.01 的问题已修（改为朝 floor 渐近；实测 min 0.5168，floor 钳位 0 次）",
+      "时间轴从 1 开始改为含 t=0（record_initial），共 7 agents x 301 = 2107 行"
+    ],
+    "still_open_from_round1": [
+      "roles.py 的角色体系仍 0 消费者（B12）",
+      "niche 维度退化 / overlap 无区分度（B9）",
+      "Resource 不守恒与负数量（B3）",
+      "niche distance_to 的维度顺序/长度问题（B2）",
+      "set_position 的 NaN 饱和（B10）"
+    ]
+  },
+  "uncertainties": [
+    "报告基线是 HEAD fe56135 + 未提交工作树（见 baseline 字段）；同一工作树上另有并行审计，若 family/niche 文件在审计后被改动，可用 file_sha256_at_audit 判定是否需要复跑。",
+    "同一 working tree 上另有 core-auditor 等并行审计；若 family/niche 文件在审计后被改动，本报告的 sha256 可用于判定是否需要重跑。",
+    "experiments/ 的 E1-E4 数字属 task-10 范围，本报告只提供机制层的独立测量（影响效应随步数衰减、susceptibility 边界连续但角色切换不连续），不对其结论下判断。"
+  ],
+  "baseline": {
+    "identity": "HEAD = fe56135 (v0.1.0) + 未提交工作树（pre-existing, 会话开始前即存在）",
+    "not_pure_v010": "本报告的全部实测运行都发生在'HEAD + 未提交改动'的工作树上，不是纯净的 v0.1.0 发布版本。读者不应把本报告的实测数值直接归到 v0.1.0 tag。",
+    "dirty_files_in_scope": [
+      "M family_abm/family/family_member.py",
+      "M family_abm/family/household.py",
+      "M family_abm/family/influence.py",
+      "M family_abm/family/relationships.py",
+      "M tests/test_influence.py",
+      "M tests/test_simulation_and_fitting.py",
+      "?? tests/test_examples_smoke.py",
+      "?? tests/test_experiments.py",
+      "?? tests/test_features_nan.py",
+      "?? tests/test_registration.py"
+    ],
+    "clean_vs_head_in_scope": [
+      "family_abm/family/roles.py",
+      "family_abm/niche/micro_niche.py",
+      "family_abm/niche/resources.py",
+      "family_abm/niche/influence.py",
+      "family_abm/family/__init__.py",
+      "family_abm/niche/__init__.py"
+    ],
+    "uncommitted_delta_summary": [
+      "family_abm/family/influence.py（25 行）：仅把 `float(x.get(k, d) or d)` 改为 `float(x.get(k, d))`（零值兜底修复）与相应 docstring，未改动机制结构",
+      "family_abm/family/relationships.py（25 行）：关系种子加入 scope（家庭环境内序号）与 relation_type（修同名家庭串流）",
+      "family_abm/family/family_member.py（24 行）：role 与生命阶段分离（role 不再被年龄覆盖；income/stress 用按年龄派生的 stage 直接索引，去掉 .get(role, 0.2) 兜底）",
+      "family_abm/family/household.py（27 行）：add_member 在家庭未接入环境时回退到成员自己的 environment；补 scope；docstring",
+      "tests/test_influence.py（+104）、tests/test_simulation_and_fitting.py（+56）：新增回归测试（含 or 零值、同名家庭串流、relation_type 参与种子、role 不被覆盖等）"
+    ],
+    "fixed_by_uncommitted_changes": [
+      "HEAD 中 `susceptibility_scale=0` 被 `or 1.0` 静默改写为 1.0（消融条件被篡改）——工作树已修，并有 test_susceptibility_scale_zero_is_honored 覆盖",
+      "HEAD 中来源 `health=0` 被 `or 1.0` 当作满血（能量约束失效）——工作树已修，并有 test_zero_health_source_has_no_energy 覆盖",
+      "HEAD 中两个同名家庭的关系随机流完全相同（身份键只用家庭名）——工作树加入 container_seq scope 后修掉",
+      "HEAD 中 relation_type 未参与关系种子派生（docstring 声称参与）——工作树已修",
+      "HEAD 中 role 在第一步后用年龄派生值静默覆盖 role_name，且首步 income 落入 0.2 兜底乘数——工作树已修"
+    ],
+    "provenance_method": [
+      "git status --short -- family_abm/family family_abm/niche tests",
+      "git diff HEAD -- family_abm/family/influence.py family_abm/family/relationships.py",
+      "git diff HEAD -- family_abm/family/family_member.py family_abm/family/household.py",
+      "git show HEAD:tests/test_influence.py | Select-String 'select_sources(members\\[0\\]'",
+      "判定规则：含缺陷的代码行若出现在 `git diff HEAD` 的 context/omitted 区域（即未被改动）或在 HEAD 版本中可查到 -> committed；仅由未提交新增行引入 -> uncommitted；两者皆有 -> both。"
+    ],
+    "measurement_caveat": "所有定量数值（钳位次数、影响量、压力值、niche 方差等）都是工作树基线的读数。未提交改动会改变关系随机流（scope/relation_type）与首步 income 乘数（role->stage），因此在纯净 HEAD 上复跑数值会有小幅差异；每条 finding 的定性结论已逐条核对其缺陷代码是否存在于 HEAD（结论见 provenance）。"
+  },
+  "severity_distribution": {
+    "P1": 3,
+    "P2": 9,
+    "P3": 5
+  },
+  "provenance_distribution": {
+    "committed": 17
+  }
+}

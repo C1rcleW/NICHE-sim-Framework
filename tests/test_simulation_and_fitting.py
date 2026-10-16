@@ -127,6 +127,62 @@ def test_formatter_error_message_is_actionable() -> None:
     assert "state_happiness" in message, "错误信息应列出可用的状态列"
 
 
+# ── 角色与生命阶段 ────────────────────────────────────────────────────────
+
+
+def _first_step_income(role_name: str, age: float = 40.0) -> float:
+    """构造→步进 1 步→返回收入。randomness=0 以隔离噪声，使断言确定。"""
+    _seed()
+    env = Environment()
+    env.params = {"randomness": 0.0}
+    household = Household(name="H")
+    env.add_agent(household)
+    member = FamilyMember(name="M", age=age, role_name=role_name)
+    household.add_member(member)
+    sim = Simulation(env, scheduler=Scheduler("sequential"))
+    sim.run(1)
+    return float(member.get_state_value("income"))
+
+
+def test_adult_income_is_identical_regardless_of_family_role() -> None:
+    """同龄同配置下，``role_name`` 只是家庭角色，不应改变收入动力学。
+
+    回归：收入乘数此前按 ``role`` 属性查表，而该属性构造时取自 ``role_name``——
+    声明 ``"parent"``（README、示例与仪表板下拉框全这么写）的 40 岁成员首步
+    落进兜底乘数 0.2，与 ``"adult"`` 相差 5 倍；第二步才被年龄派生值覆盖。
+    """
+    parent_income = _first_step_income("parent")
+    adult_income = _first_step_income("adult")
+    assert parent_income == pytest.approx(adult_income), (
+        f"家庭角色改变了收入动力学：parent={parent_income}, adult={adult_income}"
+    )
+
+
+def test_toddler_income_uses_age_stage_not_declared_role() -> None:
+    """0.5 岁婴儿的收入必须按 preschool 阶段（乘数 0）计算，与声明的角色无关。
+
+    回归：早先用声明的 role（默认 adult，乘数 1.0）算婴儿收入，高估约 39%
+    ——生命阶段从未参与首步计算。
+    """
+    income = _first_step_income("adult", age=0.5)
+    assert income == 0.0, f"婴儿首步收入应为 0（preschool 乘数），实际 {income}"
+
+
+def test_family_role_attribute_survives_steps() -> None:
+    """声明的 ``role`` 不应被年龄派生的生命阶段静默覆盖。"""
+    _seed()
+    env = Environment()
+    household = Household(name="H")
+    env.add_agent(household)
+    member = FamilyMember(name="M", age=40, role_name="parent")
+    household.add_member(member)
+    sim = Simulation(env, scheduler=Scheduler("sequential"))
+    sim.run(10)
+    assert member.get_attribute("role") == "parent", (
+        f"role 被静默覆盖为 {member.get_attribute('role')!r}——声明值应保留"
+    )
+
+
 # ── P1-3：拟合输入显式化 ─────────────────────────────────────────────────
 
 

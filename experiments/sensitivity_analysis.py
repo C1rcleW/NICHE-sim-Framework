@@ -90,10 +90,11 @@ def p1_curve_properties(shift: float, scale: float) -> dict:
     }
 
 
-def p2_p3_stage_ratios(seeds: list[int], shift: float, scale: float, strength: float) -> dict:
+def p2_p3_stage_ratios(seeds: list[int], shift: float, scale: float, strength: float,
+                       steps: int = STEPS) -> dict:
     """P2/P3：效力比是否随阶段单调递减、易感性<0.50 的阶段是否更弱。"""
     params = {"stage_shift_years": shift, "susceptibility_scale": scale}
-    e2 = e2_stage_profile(seeds, strength=strength, extra_params=params)
+    e2 = e2_stage_profile(seeds, strength=strength, extra_params=params, steps=steps)
     return {
         "ratios": e2["ratios"],
         "stages": [row["stage"] for row in e2["per_stage"]],
@@ -103,10 +104,10 @@ def p2_p3_stage_ratios(seeds: list[int], shift: float, scale: float, strength: f
     }
 
 
-def p4_dose_response(seeds: list[int], shift: float, scale: float) -> dict:
+def p4_dose_response(seeds: list[int], shift: float, scale: float, steps: int = STEPS) -> dict:
     """P4：无钳位区间内剂量-反应是否单调、可信强度上限是多少。"""
     params = {"stage_shift_years": shift, "susceptibility_scale": scale}
-    e3 = e3_dose_response(seeds, [0.0, 0.5, 1.0, 2.0, 4.0, 8.0], extra_params=params)
+    e3 = e3_dose_response(seeds, [0.0, 0.5, 1.0, 2.0, 4.0, 8.0], extra_params=params, steps=steps)
     best_snr = max((p["snr"] for p in e3["points"]), default=0.0)
     clamped = [p for p in e3["points"] if p["clamped_fraction"] >= CLAMP_LIMIT]
     return {
@@ -118,10 +119,11 @@ def p4_dose_response(seeds: list[int], shift: float, scale: float) -> dict:
     }
 
 
-def p5_lagged(seeds: list[int], shift: float, scale: float, strength: float) -> dict:
+def p5_lagged(seeds: list[int], shift: float, scale: float, strength: float,
+              steps: int = STEPS) -> dict:
     """P5：早期影响在成年后是否仍可分辨。"""
     params = {"stage_shift_years": shift, "susceptibility_scale": scale}
-    e4 = e4_lagged_effect(seeds, strength=strength, extra_params=params)
+    e4 = e4_lagged_effect(seeds, strength=strength, extra_params=params, steps=steps)
     return {
         "childhood_snr": e4["childhood"]["snr"],
         "adulthood_snr": e4["adulthood"]["snr"],
@@ -176,7 +178,7 @@ def main(argv=None) -> int:
     print(f"  {'平移':>6}{'缩放':>7}{'效力比序列':>42}{'P2递减':>8}{'P3更弱':>8}")
     p23_results = []
     for shift, scale in itertools.product(SHIFTS, SCALES):
-        result = p2_p3_stage_ratios(seeds, shift, scale, strength=4.0)
+        result = p2_p3_stage_ratios(seeds, shift, scale, strength=4.0, steps=args.steps)
         p23_results.append({"shift": shift, "scale": scale, **result})
         ratios = " ".join(f"{r:.3f}" for r in result["ratios"])
         print(f"  {shift:>6.1f}{scale:>7.2f}{ratios:>42}"
@@ -194,7 +196,7 @@ def main(argv=None) -> int:
           f"{'首个钳位强度':>14}{'判定':>8}")
     p4_results = []
     for shift, scale in itertools.product(SHIFTS, SCALES):
-        result = p4_dose_response(seeds, shift, scale)
+        result = p4_dose_response(seeds, shift, scale, steps=args.steps)
         p4_results.append({"shift": shift, "scale": scale, **result})
         bound = result["clean_upper_bound"]
         clamp = result["first_clamped_strength"]
@@ -214,7 +216,7 @@ def main(argv=None) -> int:
           f"{'衰减比':>10}{'判定':>8}")
     p5_results = []
     for shift, scale, strength in itertools.product(SHIFTS, SCALES, STRENGTHS):
-        result = p5_lagged(seeds, shift, scale, strength)
+        result = p5_lagged(seeds, shift, scale, strength, steps=args.steps)
         p5_results.append({"shift": shift, "scale": scale, "strength": strength, **result})
         print(f"  {shift:>6.1f}{scale:>7.2f}{strength:>7.1f}"
               f"{result['childhood_snr']:>12.2f}{result['adulthood_snr']:>12.2f}"

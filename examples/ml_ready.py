@@ -56,8 +56,17 @@ def main():
     print("Columns:", list(df_panel.columns), "\n")
 
     # Predict next-step happiness (supervised learning target)
+    # 特征列必须取"目标 agent 类型真正拥有"的列：宽表 NaN 表示该 agent 没有
+    # 这个状态（Household 没有 state_happiness，FamilyMember 没有
+    # state_total_income），混合两类列会让完整案例过滤丢掉所有行。
+    member_rows = df_panel["agent_type"] == "FamilyMember"
+    member_state_cols = [
+        c for c in df_panel.columns
+        if c.startswith("state_") and c != "state_happiness"
+        and df_panel.loc[member_rows, c].notna().all()
+    ]
     X, y = extractor.extract_features(
-        feature_columns=[c for c in df_panel.columns if c.startswith("state_") and c != "state_happiness"],
+        feature_columns=member_state_cols,
         target_column="state_happiness",
         lag_steps=1,
     )

@@ -20,9 +20,11 @@ class Household(Agent):
         Parameters
         ----------
         environment : Environment, optional
-            所属环境。**建议显式传入**，否则 ``add_member()`` 在家庭被
-            ``Environment.add_agent()`` 注册之前无法取得环境注入的随机数发生器，
-            此时新建关系会退回全局 ``random``，导致带 ``seed`` 的仿真不可复现。
+            所属环境。**建议显式传入**：``add_member()`` 建立关系时优先用家庭的
+            环境取种子，家庭未接入时退回成员自己的 environment；两者都没有时
+            关系初值会退回全局 ``random``，导致带 ``seed`` 的仿真不可复现。
+            成员的注册由 ``Environment.add_agent()`` 在家庭注册时收养完成，
+            与 ``add_member`` 的调用先后无关。
         """
         super().__init__(agent_id=household_id, **kwargs)
         self.set_attribute("name", name)
@@ -47,9 +49,23 @@ class Household(Agent):
         return rng if rng is not None else _random
 
     def add_member(self, member: FamilyMember, relation_to_head: str = "member") -> None:
+        """加入成员并建立与既有成员的关系。
+
+        注册时机不限：家庭尚未接入环境时，成员会由
+        ``Environment.add_agent()`` 在家庭注册时**收养**（见其 docstring），
+        因此 "先 add_member 后 add_agent" 与反过来的顺序等价。
+
+        关系的随机流种子取自环境；家庭还没接入环境时退回**成员自己的**
+        environment（成员构造时常已传入 ``environment=env``），避免关系初值
+        退回全局 ``random`` 而破坏可复现性。
+        """
         self.members[member.id] = member
-        rng = self._rng()
-        seed = getattr(self.environment, "seed", None) if self.environment is not None else None
+        env = self.environment if self.environment is not None else getattr(member, "environment", None)
+        rng = getattr(env, "rng", None) if env is not None else None
+        seed = getattr(env, "seed", None) if env is not None else None
+        # 关系种子的 scope：家庭在环境内的确定性序号。不能用显示名（同名家庭，
+        # 包括默认名，会拿到完全相同的随机流），也不能用 uuid（每次运行都变）。
+        scope = str(env.container_seq(self)) if env is not None else None
         for existing_id in self.members:
             if existing_id != member.id:
                 # 关系身份用**家庭名 + 成员在家庭中的加入序号**，而不是 uuid：
@@ -62,6 +78,7 @@ class Household(Agent):
                     rng=rng,
                     seed=seed,
                     identity=(self._member_label(member), self._member_label(existing_id)),
+                    scope=scope,
                 )
                 self.relationships[(member.id, existing_id)] = rel
                 self.relationships[(existing_id, member.id)] = rel

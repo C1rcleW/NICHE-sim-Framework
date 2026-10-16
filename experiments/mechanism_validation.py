@@ -184,7 +184,8 @@ def stack_std(series_list: list[np.ndarray]) -> np.ndarray:
 # ── E2 影响量的年龄结构 ─────────────────────────────────────────────────────
 
 
-def e2_stage_profile(seeds: list[int], strength: float, extra_params: dict | None = None) -> dict:
+def e2_stage_profile(seeds: list[int], strength: float, extra_params: dict | None = None,
+                     steps: int = STEPS) -> dict:
     """阶段易感性在各发展阶段的**实际效力**：承受影响量之比。
 
     注意（这是对最初假设的修正）
@@ -215,7 +216,7 @@ def e2_stage_profile(seeds: list[int], strength: float, extra_params: dict | Non
             "use_life_stage_susceptibility": flag,
             "role_switch": 1.0,
             **(extra_params or {}),
-        })
+        }, steps=steps)
 
     staged = ensembles["staged"]
     ages = stack_mean(staged["child_age"])
@@ -270,7 +271,7 @@ def e2_stage_profile(seeds: list[int], strength: float, extra_params: dict | Non
 
 
 def e3_dose_response(seeds: list[int], strengths: list[float],
-                     extra_params: dict | None = None) -> dict:
+                     extra_params: dict | None = None, steps: int = STEPS) -> dict:
     """影响强度 → 轨迹偏离：应单调增大，并呈现饱和。
 
     **配对设计**：同一 seed 下比较"有影响"与"无影响"的子代轨迹，再对差值取
@@ -279,14 +280,14 @@ def e3_dose_response(seeds: list[int], strengths: list[float],
     量级小得多，信噪比才能反映真实可分辨性。
     """
     baseline_by_seed = run_ensemble(seeds, {"influence_strength": 0.0,
-                                            **(extra_params or {})})["child_happiness"]
+                                            **(extra_params or {})}, steps=steps)["child_happiness"]
 
     points = []
     for strength in strengths:
         ensemble = run_ensemble(seeds, {"influence_strength": strength,
                                         "use_life_stage_susceptibility": 1.0,
                                         "role_switch": 1.0,
-                                        **(extra_params or {})})
+                                        **(extra_params or {})}, steps=steps)
         paired = []
         for base_series, treat_series in zip(baseline_by_seed, ensemble["child_happiness"], strict=False):
             length = min(len(base_series), len(treat_series))
@@ -343,7 +344,7 @@ def e3_dose_response(seeds: list[int], strengths: list[float],
 
 
 def e4_lagged_effect(seeds: list[int], strength: float,
-                     extra_params: dict | None = None) -> dict:
+                     extra_params: dict | None = None, steps: int = STEPS) -> dict:
     """父母影响是否在子代成年后仍留下可测差异（滞后效应）。
 
     **配对设计**：同一 seed 下比较"全程有影响"与"无影响"，对差值取系综均值。
@@ -353,8 +354,8 @@ def e4_lagged_effect(seeds: list[int], strength: float,
     """
     full = run_ensemble(seeds, {"influence_strength": strength,
                                 "use_life_stage_susceptibility": 1.0, "role_switch": 1.0,
-                                **(extra_params or {})})
-    none = run_ensemble(seeds, {"influence_strength": 0.0, **(extra_params or {})})
+                                **(extra_params or {})}, steps=steps)
+    none = run_ensemble(seeds, {"influence_strength": 0.0, **(extra_params or {})}, steps=steps)
 
     ages = stack_mean(full["child_age"])
     paired = []
@@ -429,7 +430,7 @@ def main(argv=None) -> int:
     print("=" * 78)
     print("E2  阶段易感性的实际效力（承受影响量之比 = 阶段/恒定）")
     print("=" * 78)
-    e2 = e2_stage_profile(seeds, strength=4.0)
+    e2 = e2_stage_profile(seeds, strength=4.0, steps=args.steps)
     report["e2"] = e2
     print(f"  {'阶段':<10}{'年龄区间':>12}{'步数':>6}{'易感性':>9}"
           f"{'易感性比':>10}{'效力比':>10}{'放大倍数':>11}")
@@ -448,7 +449,7 @@ def main(argv=None) -> int:
     print("E3  剂量-反应关系（配对设计：同一 seed 下有无影响之差）")
     print("=" * 78)
     strengths = [0.0, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
-    e3 = e3_dose_response(seeds, strengths)
+    e3 = e3_dose_response(seeds, strengths, steps=args.steps)
     report["e3"] = e3
     print(f"  {'强度':>8}{'平均偏离':>13}{'最大偏离':>13}{'配对噪声':>13}"
           f"{'信噪比':>9}{'触界比例':>11}")
@@ -463,7 +464,7 @@ def main(argv=None) -> int:
     print("=" * 78)
     print("E4  代际更新的滞后效应（配对设计）")
     print("=" * 78)
-    e4 = e4_lagged_effect(seeds, strength=4.0)
+    e4 = e4_lagged_effect(seeds, strength=4.0, steps=args.steps)
     report["e4"] = e4
     child = e4["childhood"]
     adult = e4["adulthood"]

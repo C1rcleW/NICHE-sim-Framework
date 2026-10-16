@@ -1,0 +1,557 @@
+{
+  "stream": "C",
+  "task": "task-8",
+  "commit": "fe56135",
+  "working_tree": "HEAD=fe561357fc58eb48c05f47c698c6215a6dd33336（v0.1.0 发布提交，按 lead 说明）。工作区不干净（git status 891 行 diff）。在本次审查范围内，只有 family_abm/ml/features.py 被未提交修改（+29/-4），tests/test_features_nan.py 是未跟踪新文件；其余范围内文件（web/app.py、web/__main__.py、web/__init__.py、templates/index.html、static/js/dashboard.js、static/css/style.css、ml/recorder.py、viz/plots.py、tools/check_dashboard_behavior.js）与 HEAD 逐字节一致（git diff --stat HEAD 对这些路径为空）。因此：C2 的 fillna(0) 缺陷属于**已提交的 HEAD/v0.1.0**（工作区修复未提交），其余全部发现都对 HEAD 成立。审查期间未写入任何被跟踪文件；临时脚本全部位于 %TEMP%\\niche_r2\\。",
+  "scope": [
+    "family_abm/web/app.py",
+    "family_abm/web/__main__.py",
+    "family_abm/web/__init__.py",
+    "family_abm/web/templates/index.html",
+    "family_abm/web/static/js/dashboard.js",
+    "family_abm/web/static/css/style.css",
+    "family_abm/ml/recorder.py",
+    "family_abm/ml/features.py",
+    "family_abm/viz/plots.py",
+    "tools/check_dashboard_behavior.js",
+    "tests/test_data_contract.py",
+    "tests/test_features_nan.py"
+  ],
+  "file_sha256_at_audit": {
+    "family_abm/web/app.py": "da687626c2d36953d63efaeb07d29eecca5614582bf683f60a0d2606ee24c53f",
+    "family_abm/web/__main__.py": "509a1e46ed7c74127d04e7731e1b28e3ef21a79b6f1886bbf17b58a25a3ef671",
+    "family_abm/web/__init__.py": "568baab3dde682b098be17ef4e74e661455463c8263a0b3c36dda4f161973875",
+    "family_abm/web/templates/index.html": "8078fa9774619db27f0d7c978e900cd18803bca7db74021af14d2b779c2a75e5",
+    "family_abm/web/static/js/dashboard.js": "9dea24010eda964e8029b9240ae2d600ad46bb7d75c875a3d0307cf6b2a46634",
+    "family_abm/web/static/css/style.css": "870461ae98447c6b0ca90e5f38403e541a7a5171771a3aa2ffee3d305bd96c30",
+    "family_abm/ml/recorder.py": "4ab607f54a2e6756601315d28c8b35ba95cadd04894b94fde0df6251e4a71eb1",
+    "family_abm/ml/features.py": "f2da42a9d18e8948b424c8c2ac4e908e1494c510f27ec5e75ca1ed8a1a4697e0",
+    "family_abm/viz/plots.py": "9e8379f2766e77629dacb2917c490aa5313ddf1f1809ccda9712d34bfe722a12",
+    "tools/check_dashboard_behavior.js": "97d6b410bce8900682a8f7194f01145aaa08a7def5cba34fd739819d7860368c",
+    "tests/test_data_contract.py": "d888f90806e60f8d942938f5d2550e1db2ac2de330fa63fc266501ebccb914fd",
+    "tests/test_features_nan.py": "e72182ae4a98313a73fe47a3cdc067baf2041b5a448a521f4e14c493e05060d7"
+  },
+  "method": [
+    "前端：node tools/check_dashboard_behavior.js 基线 → 全部 PASS（exit 0）；再用 6 个突变体（%TEMP%\\niche_r2\\mutants\\*.js，由脚本对仓库文件做字符串替换生成，DASHBOARD_JS 指过去）验证判别力：M1 去乱序守卫、M2 fitSelectionBlocked 恒 false、M3 去 runFitting 同步重载、M4 不置灰 needs_manual_mapping 的 option、M5 请求序号不自增、M6 陈旧响应返回 ready。",
+    "前端：把 tools/check_dashboard_behavior.js 复制到 %TEMP% 并追加 8 个补充场景（A1 竞态下的状态栏、A2/A2b null 契约、A3 哨兵解、A4 optimizer_failed、A5/A5b api() 与 422、A6 i18n 键覆盖），用 DASHBOARD_JS 指向真实 dashboard.js 运行（%TEMP%\\niche_r2\\harness_ext.js）。",
+    "后端：%TEMP%\\niche_r2\\backend_probe.py、followup_probe.py、misc_probe.py（fastapi.testclient，从仓库外运行，sys.path 注入仓库；因 family_abm.web 包属性遮蔽子模块，必须 importlib.import_module('family_abm.web.app')）。覆盖 /api/params、/api/run、/api/data、/api/models、/api/fit、/api/niche、/api/network 的字段集合、null 语义、错误码矩阵、seed 契约、拟合耗时。",
+    "后端并发：临时启动 uvicorn 127.0.0.1:8611（%TEMP% 为 cwd，PYTHONPATH=仓库），用 httpx 在线程里发 robust 拟合，同时测其它端点延迟；结束后 job_kill，Test-NetConnection 8611=False（已关闭）。",
+    "ML：%TEMP%\\niche_r2\\head_features_probe.py 把 `git show HEAD:family_abm/ml/features.py` 导出到临时包 headpkg（recorder 用仓库副本，仅把相对 import 改为绝对）并**真实执行 HEAD 代码**，与工作区版本逐项对比；另有 61 步面板的完整案例/ground-truth 对齐检查。",
+    "可视化：%TEMP%\\niche_r2\\ml_viz_probe.py 连调 plot_timeseries 25 次统计 plt.get_fignums() 与 warnings；%TEMP%\\niche_r2\\e4_agg_side_effect.py 在独立进程中测 import family_abm 对 matplotlib 后端与 rcParams 的影响（use-first / pyplot-first 两种顺序）。",
+    "回归：python -X utf8 -m pytest tests/test_data_contract.py tests/test_features_nan.py -q -p no:cacheprovider（从 %TEMP% 运行，PYTHONDONTWRITEBYTECODE=1）→ 17 passed。"
+  ],
+  "verdict": {
+    "question": "v0.1.0 的 Web 前后端契约（字段、错误码、warning、null 语义）、前端竞态防护、ml/features 的 NaN 语义与 viz/plots 的资源管理是否可信？",
+    "answer": "契约骨架已明显改善（null 不再被填 0、警告可见、错误码有了分类、竞态守卫真实有效），但仍存在 4 条 P1：字母序任取的 suggested_mapping 被前端自动提交并得到 ok/converged=True、已发布版本的 ml/features 仍伪造 29.16% 的标签、/api/run|data|niche|network 的异常逃逸为 text/plain、/api/fit 仍在事件循环内同步执行。",
+    "causal_paths_verified": [
+      "状态映射 → 拟合结论：/api/models 的 alternative 取 usable（字母序）前 N 列（app.py:250-255）→ 前端 currentStateMapping 直接返回该映射并写入请求体（dashboard.js:475-481、621-624，harness 场景 1b 实测请求体 {'population':'state_only'}）→ /api/fit 用该映射拟合 → 返回 status=ok/converged=true/r² 极端负值（实测 square_law r²=-2368436.78）→ 前端只显示 R²/Converged，从不显示 state_columns（grep dashboard.js 内 0 处 'state_columns'）。",
+      "HEAD 的 fillna(0) → 伪造标签：HEAD features.py:39-42（X=...fillna(0)、y=...shift(-lag).fillna(0)[:len(X)]）→ 实测 847 个标签中 247 个（29.1617%）是无真实下一步的行被写成 0 → 下游任何监督学习把这 247 行当真实观测。",
+      "未兜底端点 → text/plain → 前端只剩 JSON 解析错误：api_run/api_data/api_niche/api_network 无 try（app.py:101-130/133-167/416-442/445-475）→ 实测 age=NaN 时 /api/data 抛 ValueError（JSONResponse 不接受 NaN，starlette allow_nan=False）返回 'Internal Server Error' + text/plain → 前端 api() 的 res.json() 抛 SyntaxError 被 catch 成 {error:\"Unexpected token 'I'...\"}（harness A5a 实测）。",
+      "async def 内同步拟合 → 事件循环饥饿：api_fit 为 async def 直接调用 fitter.fit_robust（app.py:277-280、338-342），全仓库无 run_in_threadpool/asyncio.to_thread（grep 0 命中）→ 实测 uvicorn(8611) 上一次 wellbeing robust=True 耗时 38.39s，期间同服务 GET /api/params 延迟 37.39s（拟合结束瞬间恢复）。"
+    ],
+    "not_causal": [
+      "竞态防护并非失效：M1/M5/M6 突变（去守卫、序号不自增、陈旧响应返回 ready）都被官方 harness 场景 3 判失败，说明 _modelInfoSeq 守卫确实生效、测试有判别力；问题只出在 runFitting 的 stale 分支（C6）。",
+      "图表 null 语义已修复：/api/data 现在传 null（app.py:158），前端跳过 null 求均值（dashboard.js:526-538、670-681），实测前端聚合均值 0.537640 与仅成员均值 0.537640 完全相同——round-1 的 fillna(0) 稀释 28.6% 问题不再存在。",
+      "哨兵解与 prediction_failed 的顺序正确：app.py:372-385 在 predict 之前判定 hit_sentinel，实测 resource_competition robust=False 返回 200 model_not_applicable + predict_trace=[] + prediction_skipped=true + warning，并**没有**触发 500 prediction_failed。",
+      "seed 并非不可复现：seed 缺省与显式 null 都经 Simulation.__init__ 落到 DEFAULT_SEED=42（core/simulation.py:65-68），实测两次 seed=null 结果相同；不一致的只是 /api/run 回传 cfg.seed 而非 effective_seed（C18）。"
+    ]
+  },
+  "findings": [
+    {
+      "id": "C1",
+      "severity": "P1",
+      "title": "/api/models 的 suggested_mapping 是字母序任取，前端自动提交后 /api/fit 返回 status=ok/converged=true，而界面从不展示实际使用的状态列",
+      "evidence": [
+        "family_abm/web/app.py:250-255 `if default_ok: suggested = expected else: alternative = [c for c in usable if c not in expected.values()]; suggested = ({s: alternative[i] for i, s in enumerate(state_names)} if len(alternative) >= len(state_names) else None)`；usable 来自 :191 `for column in sorted(...)` → 纯字母序",
+        "实测 GET /api/models（默认 families, 60 步）给出的建议：square_law/linear_law/resource_competition/influence: {R1/O1: state_economic_pressure, R2/O2: state_education}；logistic: {population: state_economic_pressure}；lotka_volterra: {prey: state_economic_pressure, predator: state_education}",
+        "实测把上述建议原样 POST /api/fit（robust=False）：square_law → 200 ok, r²=-2368436.782433, converged=True, params_at_bounds=['alpha','beta','eps1','eps2']；linear_law → 200 ok, r²=-41.534419, converged=True；logistic → 200 ok, r²=-52.248372, converged=True；lotka_volterra → 200 ok, r²=-41.551993, converged=True；influence → 200 ok, r²=0.690949",
+        "前端确实自动发送该映射：dashboard.js:475-481 currentStateMapping 返回 info.suggested_mapping；:614-624 把它放进 /api/fit 请求体；harness 场景 1b 实测请求体 state_mapping={'population':'state_only'}（即后端建议被无条件采用）",
+        "界面不展示实际列：grep 'state_columns' family_abm/web/static/js/dashboard.js → 0 命中（该字段由 app.py:376/409 返回）；dashboard.js:642-650 只渲染 r_squared/converged/params"
+      ],
+      "impact": "用户在下拉里选 square_law/logistic/lotka_volterra 等抽象模型时，UI 自动把它拟合到与模型语义无关的列（economic_pressure/education），并以 status=ok + Converged=是 的 KPI 呈现；由于不展示 state_columns，用户无法判断到底拟合了哪两个变量。缓解项：前端会显示 'R² 非正…' 与 '参数被边界钉住' 两条警告（harness A3 实测），但 'Converged: 是' 与荒谬的 R² 并排显示仍会误导。属于「静默产生错误结论」。",
+      "minimal_fix": "①/api/models 不再给 abstract 模型自动建议映射，而是返回 needs_manual_mapping=true 并让前端提供映射选择控件（或在 UI 上显式确认建议的列名）；②结果卡片显示响应里的 state_columns（一行 'R1=state_economic_pressure, R2=state_education'）；③converged 与 R² 联动：R²<=0 时不要把 converged 作为独立'通过'指标展示，或把 hit_sentinel/params_at_bounds/r²<=0 合并成一个'该拟合不可用'的状态。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "app.py 与 dashboard.js 均未被工作区改动触碰（git diff --stat HEAD 对这些路径为空）；映射建议与前端行为均在 HEAD 上复现"
+    },
+    {
+      "id": "C2",
+      "severity": "P1",
+      "title": "已发布的 v0.1.0（HEAD fe56135）中 ml/features.py 仍用 fillna(0) 伪造监督标签：847 条标签里 247 条（29.16%）是伪造的 0",
+      "evidence": [
+        "git show HEAD:family_abm/ml/features.py（HEAD 版本）:38-42：`X = df[feature_cols].fillna(0).values`、`y = df.groupby(\"agent_id\")[target_column].shift(-lag_steps).fillna(0).values[:len(X)]`——特征与滞后目标都被填 0，且不做任何完整案例过滤",
+        "真实执行 HEAD 代码（把 HEAD 的 features.py 导出到 %TEMP%\\niche_r2\\headpkg 后 import，recorder 用仓库当前版本，panel=2 户 5 成员×121 时点=847 行）：X.shape=(847,3)、y.shape=(847,)，X 中 726 个 0 与 panel 中这 3 列的真实 NaN 单元格数 726 完全相等（全部为 fillna 伪造），y 中 0 共 247 个 = 29.1617%",
+        "逐行对照：247 个 0 中，242 个是 Household 行（无成员状态，target 全 NaN）、5 个是各成员轨迹末步（无下一步）→ 247/247 都是「没有真实下一步」被写成 0，真实值恰为 0 的行 0 个",
+        "工作区未提交的修复（family_abm/ml/features.py:47-70，按完整案例过滤 + valid 掩码）实测 X.shape=(600,3)、y.shape=(600,)、y==0 为 0 个、与自建 ground-truth（5 成员×120 个 (t,t+1) 配对）逐元素一致",
+        "该修复未提交：git status → ' M family_abm/ml/features.py'（+29/-4）；配套测试 tests/test_features_nan.py 为未跟踪文件（?? tests/test_features_nan.py）→ 发布产物里既没有修复也没有测试"
+      ],
+      "impact": "直接把 v0.1.0 的 FeatureExtractor.extract_features 用于监督学习会得到 29.16% 的伪造 0 标签（含 242 行全 0 特征 → 0 目标的 Household 行），模型会把「不存在」学成真实观测值；这正是 README:335 与 recorder.py:49-60 承诺不会发生的行为。属于「静默产生错误结论」。",
+      "minimal_fix": "把工作区已有的 features.py 修复提交进 0.1.1（同时 git add tests/test_features_nan.py，让 CI 覆盖它），并在 CHANGELOG 标注为行为变更。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "缺陷位于 HEAD 提交内容；工作区含未提交修复（fixed_by_uncommitted_changes），修复效果已实测验证，但发布产物仍带缺陷"
+    },
+    {
+      "id": "C3",
+      "severity": "P1",
+      "title": "/api/run、/api/data、/api/niche、/api/network 没有函数级兜底，异常逃逸为 text/plain 'Internal Server Error'，前端只剩 JSON 解析错误",
+      "evidence": [
+        "app.py:277-292 只有 /api/fit 有函数级兜底；api_run(:101-130)、api_data(:133-167)、api_niche(:416-442)、api_network(:445-475) 直接返回 JSONResponse 且无 try",
+        "实测（TestClient, raise_server_exceptions=False）：raw body 传 age=NaN（json.loads 接受 NaN 字面量，SimConfig.families 为 list[dict] 不校验）→ /api/run 200，随后 GET /api/data → **500 text/plain; charset=utf-8, body='Internal Server Error'**（app.py:146 `round(a.get_attribute('age'),1)` 产生 NaN，starlette JSONResponse 是 allow_nan=False）",
+        "同类实测（全部 500 text/plain）：/api/run + age='old'（FamilyMember 算术 TypeError）；/api/run + families 缺 name（app.py:111 KeyError）；/api/run + 成员含未知键（app.py:114 FamilyMember(**m) → Agent.__init__ TypeError）；/api/run + params.income_age_spread=0（family_member.py:205 `2*spread**2` 除零）；/api/run + params.randomness='abc'（float() ValueError）",
+        "前端对非 JSON 响应的处理：dashboard.js:235-242 api() 只做 res.json()，失败被 catch 成 {error: e.message}；harness A5a 实测返回 {error:\"Unexpected token 'I', \\\"Internal S\\\"... is not valid JSON\"} 且返回值里 status 为 undefined（HTTP 状态码丢失）",
+        "UI 可达性：dashboard.js:275 所有参数输入都是 min=\"0\"，dashboard.js:286 `parseFloat(inp.value) || 0` → 用户把「年龄跨度」填 0 即触发 /api/run 500，状态栏只显示 JSON 解析错误"
+      ],
+      "impact": "任何未预期异常都会丢掉状态码、错误类型与堆栈，用户看到的是 'is not valid JSON'，排障信息全部丢失；且 income_age_spread=0 / 清空参数框这类 UI 内可达输入会稳定复现。与 /api/fit 的结构化 400/500 形成不一致契约。",
+      "minimal_fix": "给四个端点加与 api_fit 相同的函数级兜底（返回 {'error': ..., 'status': ...} + 500/400 并记录堆栈）；把 SimConfig 的 params/families 模型化（数值范围、NaN/Inf 拒绝、成员字段 extra='forbid'）使这些输入在校验层就被 422 拦住；前端 api() 增加 `if (!res.ok) return {error: ..., status: res.status}` 并容错非 JSON body。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "端点代码与 dashboard.js 的 api() 均未出现在工作区 diff 中"
+    },
+    {
+      "id": "C4",
+      "severity": "P1",
+      "title": "/api/fit 仍在事件循环内同步执行：实测一次拟合期间所有其它请求被阻塞 37.39 秒",
+      "evidence": [
+        "app.py:277-280 `@app.post('/api/fit') async def api_fit(...)` → :338-342 `result = fitter.fit_robust(_sim_df, agent_id=req.agent_id)`（同步 CPU 密集）；全仓库 grep run_in_threadpool / asyncio.to_thread / ThreadPool → 0 命中",
+        "实测 uvicorn 127.0.0.1:8611（临时服务，用后已关闭）：POST /api/fit {model_name: wellbeing, robust: true} 耗时 38.39s；拟合进行中另一请求 GET /api/params 延迟 37.39s，拟合完成后同一请求 0.001s",
+        "TestClient 实测：wellbeing robust=False 28.02–30.60s、robust=True 22.43s；square_law robust=True 41.66s；influence robust=True 19.95–20.55s（服务端 n_starts=8、每起点 maxiter=3000）"
+      ],
+      "impact": "整个单进程服务在拟合期间不可用（静态页、/api/params、/api/data 全部挂起），前端无法取消、无进度，双击按钮会继续排队；这与 round-1 报告 P1-1 是同一问题，在 v0.1.0 中**仍未修复**（跨任务重叠：若已有任务覆盖此点可直接引用本条）。",
+      "minimal_fix": "把 CPU 工作移出事件循环（改 def 让 FastAPI 走线程池，或 await run_in_threadpool）+ asyncio.wait_for 超时 + 把 n_starts/maxiter 变成请求参数；更彻底是作业化（job_id + 轮询 + 取消）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "app.py 未出现在工作区 diff 中；round-1 已报同一问题，本次为对 v0.1.0 的复验"
+    },
+    {
+      "id": "C5",
+      "severity": "P2",
+      "title": "没有人工指定映射的 UI：needs_manual_mapping 的模型被禁用后无路可走，可用模型又不说明建议列",
+      "evidence": [
+        "dashboard.js:440-444 `if (m.needs_manual_mapping) return '<option value=\"...\" disabled>...（需人工指定映射）'`；:443 `const suffix = m.directly_fittable ? '' : t('fitting.mapping_suffix')`（只写「需映射」）",
+        "dashboard.js:453-458 只用一个布尔 anySelectable 决定按钮禁用；界面上没有任何映射输入控件（index.html:88-104 无映射相关元素；grep 'state_mapping' 在 index.html 0 命中）",
+        "dashboard.js:615-619 当 currentStateMapping 返回 undefined（needs_manual）时只把状态栏设为 t('fitting.need_mapping') 并 return——用户无法完成拟合",
+        "i18n 文案 'fitting.manual_suffix'='（需人工指定映射）' 与 UI 能力矛盾：没有任何地方可以人工指定"
+      ],
+      "impact": "对真正需要人工映射的模型，界面给出「需人工指定映射」但没有任何入口，用户死路；对其它抽象模型，界面自动采用字母序映射却不显示列名（与 C1 同源）。",
+      "minimal_fix": "在 Fitting 卡片加映射选择控件（两个 state 名各一个 select，选项来自 /api/models 的 usable_state_columns），或把 /api/models 的候选映射以可编辑的文本形式回填到 UI，并在结果卡片回显生效的 state_columns。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "dashboard.js / index.html 均未出现在工作区 diff 中"
+    },
+    {
+      "id": "C6",
+      "severity": "P2",
+      "title": "切换 agent 后立刻点「拟合模型」：内部重载被判 stale 后直接 return，不发任何 /api/fit，状态栏永久停在「拟合中...」",
+      "evidence": [
+        "dashboard.js:590-606 runFitting：先 setStatus('running', t('status.fitting'))（:591），若 modelInfoAgentId !== selectedAgent 则 `const state = await loadModelInfo(); if (state === 'stale') return;`",
+        "dashboard.js:412-427 loadModelInfo：`const seq = ++_modelInfoSeq`；期间有更新的请求时 `if (seq !== _modelInfoSeq) return 'stale';` —— 但 loadModelInfo 的调用方（scheduleLoadModelInfo 的 setTimeout，dashboard.js:462-465）不消费返回值，不会回写状态",
+        "补充 harness A1 实测（deferred /api/models）：发出 3 次 /api/models（初始化 A / runFitting 内部 B / 插入的更新 B）；先解析最新的 → intervening='ready'；再解析 runFitting 的内部请求 → runFitting 提前 return；`requests 中 /api/fit 次数 = 0`；`statusText = \"Fitting...\"`（即 t('status.fitting')，此后无任何代码会改写它）"
+      ],
+      "impact": "在 200ms 防抖窗口内切换 agent 再立刻拟合（真实用户很容易做到，且拟合本身要几十秒，用户更倾向于抢先点击）会得到一个「什么都没发生」的结果：没有拟合请求、没有结果卡片，状态栏却在说正在拟合。这是竞态防护引入的副作用——守卫本身有效（见 not_causal），但 stale 分支缺少收尾。",
+      "minimal_fix": "stale 分支不要裸 return：要么 `await loadModelInfo()` 重试一次（用最新 seq）后再继续，要么明确回写状态（例如 setStatus('error', t('fitting.retry')) 或 t('status.ready')）并恢复按钮可用状态。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "dashboard.js 未出现在工作区 diff 中；官方 harness 未覆盖该路径，本条由追加场景 A1 实测"
+    },
+    {
+      "id": "C7",
+      "severity": "P2",
+      "title": "i18n 契约漂移：参数从 19 个涨到 27 个、分组从 6 个涨到 8 个，I18N 字典未跟进，12 个标签在两种语言下都退化为字面量 'param.xxx'",
+      "evidence": [
+        "实测 GET /api/params（HEAD）：groups = Education(1) / Income(4) / Health(3) / Stress(6) / Happiness(6) / Noise(1) / Family Support(4) / Other(2) = 27 个参数；DEFAULT_PARAMS 与分组集合完全相等（family_member.py:22-57 vs app.py:78-89）",
+        "补充 harness A6（用真实 dashboard.js 的 t() 逐键验证，而不是 grep）：zh 与 en 各缺 12 个键 → 'param.Family Support'、'param.Other'、'param.health_floor'、'param.health_decay_rate'、'param.stress_pressure_gain'、'param.income_baseline'、'param.influence_strength'、'param.income_support'、'param.use_life_stage_susceptibility'、'param.role_switch'、'param.susceptibility_scale'、'param.stage_shift_years'（共 35 个键，缺 12）",
+        "dashboard.js:136 `let s = map[key] || I18N['en'][key] || key;` → 缺键时返回键名本身；dashboard.js:163-166 refreshI18n 把所有 [data-i18n] 元素的 textContent 设为 t(key)；dashboard.js:270/274 buildParams 为每个分组与参数生成了 data-i18n",
+        "dashboard.js:258-268 enLabels 同样缺少上述 10 个参数名（回退到原始键名，如 'health_floor'）；zh 字典里残留已改名的旧键 'param.health_decay_base'/'param.health_decay_age'"
+      ],
+      "impact": "首次加载时这些参数显示为原始标识符（health_floor / Family Support），任何人切换一次语言后它们会变成字面量 'param.health_floor'、'param.Family Support' —— 中文界面下 12 个标签变成代码标识符，属可见的界面损坏。",
+      "minimal_fix": "让 /api/params 一并返回每个参数/分组的显示名（或建立从 DEFAULT_PARAMS 键到 i18n 键的单一真源），并加一条测试断言『/api/params 的每个 group 与 param 键都存在 param.* 翻译』（当前 tests/ 无此断言）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "dashboard.js / app.py 未出现在工作区 diff 中"
+    },
+    {
+      "id": "C8",
+      "severity": "P2",
+      "title": "api() 不检查 res.ok，runSimulation 也不校验响应形状：/api/run 返回 422 时 KPI 渲染出字面量 undefined，并把旧数据当成本次结果、状态栏报「仿真完成」",
+      "evidence": [
+        "dashboard.js:235-242 api() 只 `return await res.json()`，没有 res.ok 判断；dashboard.js:367-372 runSimulation 只判断 `if (res.error)`",
+        "FastAPI 校验失败返回 422 {\"detail\": [...]}（实测 POST /api/run steps='abc' → 422，body 无 error 字段）",
+        "补充 harness A5b 实测（fetch 桩让 /api/run 返回 {detail:[...]}、/api/data 返回一份数据）：resultKPIs innerHTML 含字面量 `<div class=\"value\">undefined</div>`（因为 res.steps/agents/observations 都不存在）；statusText = 'Simulation complete'；图表使用 /api/data 的（旧/他人）数据",
+        "harness A5b 另测 4xx 契约：api() 对 {detail:[...]} 的返回值里既无 error 也无 status（console 输出 {\"detail\":[{\"loc\":[\"body\",\"steps\"],\"msg\":\"bad\"}]}）"
+      ],
+      "impact": "服务端任何新增必填字段/校验都会让前端静默地把失败当成功：显示 undefined 指标 + 'Simulation complete' + 用旧数据画图。当前 UI 的输入（steps 被 parseInt||120 兜住、seed NaN→null 合法）尚不能构造 422，属可被未来改动立即触发的契约空洞。",
+      "minimal_fix": "api() 里 `if (!res.ok) { const b = await res.json().catch(() => ({})); return {error: b.detail ? JSON.stringify(b.detail) : ('HTTP ' + res.status), status: res.status}; }`；runSimulation 再校验 res.status === 'ok' 且 steps/agents/observations 为数字后才更新 simData 与 KPI。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "dashboard.js 未出现在工作区 diff 中；该路径官方 harness 未覆盖"
+    },
+    {
+      "id": "C9",
+      "severity": "P2",
+      "title": "import family_abm 会把宿主进程的 matplotlib 后端强制切成 Agg，并改写全局 rcParams",
+      "evidence": [
+        "family_abm/viz/plots.py:9 `matplotlib.use(\"Agg\")`（模块级，位于 import matplotlib 之后、import pyplot 之前）；:17-23 `plt.rcParams.update({... \"axes.grid\": True ...})`",
+        "family_abm/__init__.py 无条件 `from .viz import (...)`，因此任何 `import family_abm` 都会执行上述代码",
+        "独立进程实测 A（先选后端再导入）：matplotlib.use('svg') → get_backend()='svg'，rcParams['axes.grid']=False；`import family_abm` 之后 → get_backend()='Agg'，rcParams['axes.grid']=True",
+        "独立进程实测 B（先导入 pyplot）：`import matplotlib.pyplot` 后 get_backend()='tkagg'，plt.get_backend()='tkagg'；`import family_abm` 之后 → 'Agg'（用户的交互式后端被静默替换）"
+      ],
+      "impact": "库的 import 产生全局副作用：交互式用户（notebook/IDE/TkAgg）在导入 family_abm 后所有 plt.show() 都不再弹窗（Agg 无 GUI），且网格等样式被全局打开，难以定位原因；对只想用 ABM 核心（不想画图）的用户也不必要地加载 matplotlib。",
+      "minimal_fix": "不要在模块级调用 matplotlib.use；把后端选择留给用户（或提供 family_abm.viz.use_headless() 显式开关），把 rcParams 更新放进绘图函数的局部 rc_context；更彻底地把 matplotlib 变成惰性导入（viz 不再被顶层 __init__ 无条件导入）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "viz/plots.py 未出现在工作区 diff 中"
+    },
+    {
+      "id": "C10",
+      "severity": "P2",
+      "title": "/api/niche 的 social 维度恒为 1.0、economic 未归一化，前端的「社会生境空间」退化为 y=1 的水平线",
+      "evidence": [
+        "app.py:429-435 `'social_capital': last.get('state_social_capital', 0.5)` —— state_social_capital 列存在（Household 级），因此 Series.get 不会用 0.5 兜底，成员行取到 NaN",
+        "micro_niche.py:18-20 `self.position[dimension] = max(0.0, min(1.0, value))` → `min(1.0, nan) == 1.0`、`max(0.0, 1.0) == 1.0`，NaN 被静默钳到上界",
+        "实测 /api/niche（60 步，默认 families）：Father/Mother/Child/Mom/Daughter 的 position.social 全为 1.0000；economic = state_income ∈ [0.0013, 0.1236]（未做任何归一化）",
+        "dashboard.js:556-567 用 position.economic 作 x、position.social 作 y，并固定 `range:[0,1]` 两个轴"
+      ],
+      "impact": "「四维社会空间」实际只剩三维可用，且 social 对所有成员取同一个边界值 → 散点图所有点落在 y=1 的直线上，用户会误以为所有成员社会资本都拉满；economic 被量纲压到 0–0.12，视觉上全部贴左轴。round-1 报告已报此点，v0.1.0 未修复。",
+      "minimal_fix": "app.py 取值时显式处理 NaN（`v = last.get(col); v = default if v is None or pd.isna(v) else float(v)`），或改从 agent 自身的 state 读取；income 按模型口径归一化（参考 family_member.py 中 happiness_income_weight 的 `min(1.0, income*3)`）；micro_niche.set_position 对非有限值应抛错或忽略，而不是钳到边界。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "app.py 与 micro_niche.py 均未被工作区 diff 触碰"
+    },
+    {
+      "id": "C11",
+      "severity": "P2",
+      "title": "to_statistics_dataframe 的文档承诺与实现不符（attr_age 混入统计表），且该字段被 /api/data 每次计算并返回但前端从不消费",
+      "evidence": [
+        "recorder.py:78-80 注释：`numeric = df.select_dtypes(include=\"number\")` 后只 drop time/alive，紧接着的注释却写「身份/派生字段不是状态量，避免混入统计」",
+        "实测 /api/data 的 statistics（121 时点默认 families）：18 行，含 {'agent_type':'FamilyMember','column':'attr_age','n':605,'mean':31.2,...}；统计表列集合中唯一的非 state_ 列就是 attr_age",
+        "一致性核对：把 statistics 的每一行用 to_dataframe() 重新计算 n/mean/min/max（NaN 跳过）→ 0 处失配，说明数值本身正确，问题只是列选择与文档不符",
+        "前端从不消费：grep 'statistics' family_abm/web/static/js/dashboard.js → 0 命中（仅有 app.py:159/165 生产它）；一次 120 步请求里 statistics 占 2821 / 511240 字节",
+        "recorder.py:66-72 的 docstring 只说明按 agent_type 分组，未说明 n 是跨 agent×时间池化（实测 FamilyMember attr_age n=605 = 5 成员×121，而 Household state_total_income n=242 = 2×121）"
+      ],
+      "impact": "文档/实现不符（P2）；同时 /api/data 每次请求都做一次全表 groupby+agg（5000 步时无谓开销），而 UI 完全没有表格视图，属死负载（P3 层面）。",
+      "minimal_fix": "在 to_statistics_dataframe 里 drop 所有 attr_* 列（并更新 docstring 说明 n 的池化语义），或把该字段改为按需查询参数（/api/data?statistics=1）；若要保留，前端应提供表格视图消费它。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "recorder.py / app.py / dashboard.js 均未出现在工作区 diff 中"
+    },
+    {
+      "id": "C12",
+      "severity": "P2",
+      "title": "build_transition_dataset 在混合 agent 面板上 100% 行含 NaN；build_network_features 名不符实且 112 个 NaN 单元格",
+      "evidence": [
+        "features.py:81 `state_cols = state_columns or [c for c in df.columns if c.startswith(\"state_\")]`（不分 agent_type、不排除缺失）",
+        "实测（61 步、2 户 5 成员面板）：build_transition_dataset(lag=1) → shape (240,34)，含 NaN 的行占比 1.0（240/240）",
+        "features.py:97-106 build_network_features 只做 `df.groupby('agent_id')[numeric_cols].agg(['mean','std','min','max'])`，没有任何网络量；实测 shape (4,69)、含 NaN 单元格 112（Household 行的成员状态全 NaN → agg 结果 NaN）",
+        "features.py:51-54 extract_features 的默认 numeric_cols 包含 attr_age 等属性列（select_dtypes(number)）"
+      ],
+      "impact": "这两个 API 的返回值不能直接进 sklearn/pipeline：transition 数据集每行都有 NaN（任何 dropna 会丢掉全部数据）；network features 实际是逐 agent 统计表且对 Household 行大量 NaN，命名会误导使用者（前一轮 ML-8/ML-9 未修复）。",
+      "minimal_fix": "build_transition_dataset 按 agent_type 分表（或只保留该 agent 真正拥有的 state 列）；build_network_features 要么改名（agent_state_aggregates）要么真的加入关系/网络特征（household.relationships 的 affection/trust/conflict 聚合成节点特征）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "HEAD 与工作区的 build_transition_dataset/build_network_features 代码相同（工作区 diff 只改 extract_features）"
+    },
+    {
+      "id": "C13",
+      "severity": "P2",
+      "title": "extract_features 的默认参数（不带 feature_columns）实测返回空数据集 (0, 17)，静默无警告",
+      "evidence": [
+        "features.py:51-54 默认 feature_cols = 全部数值列（同时含 Household 专属与 FamilyMember 专属状态）；features.py:57-58 用 `frame.notna().all(axis=1)` 做完整案例过滤",
+        "实测（61 步面板，target=state_happiness, lag=1，不传 feature_columns）：X.shape=(0, 17)、y.shape=(0,)",
+        "同一面板传入显式特征列 state_happiness/health/stress 时：X.shape=(180,3)、y.shape=(180,)（3 成员 × 60），与 ground-truth 逐元素一致",
+        "features.py:44-45 docstring 明确「全部被过滤时返回形状 (0, n_features) 的空数组」——行为被文档化，但默认参数就落在这个分支",
+        "另测：feature_columns 传入不存在的列名 → 直接抛 pandas KeyError（\"None of [Index(['state_only_nonexistent'])] are in the [columns]\"），无友好提示"
+      ],
+      "impact": "最自然的调用方式 `extract_features(target_column=...)` 得到 0 行且不报错，使用者会以为数据里没有可用样本；无声失败比报错更难排查。",
+      "minimal_fix": "默认 feature_cols 排除 attr_*/alive 并按 agent_type 分表（或默认取 target 同类型的状态列）；当结果为空时 warnings.warn 明确指出被过滤的原因；对不存在的列名抛带可用列清单的 ValueError。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "默认列选择逻辑在 HEAD 与工作区一致；工作区修复只解决了标签/掩码问题"
+    },
+    {
+      "id": "C14",
+      "severity": "P2",
+      "title": "/api/models 在没有任何仿真数据时返回 200（而不是像其它端点一样 400），body 看起来像「当前数据没有可拟合模型」",
+      "evidence": [
+        "app.py:207-238：agent_id 为 None 时 `frame = _sim_df`（可能为 None）→ :238 `_column_variance_report(frame)`，:188-189 对 None 直接返回 ([],[],[])",
+        "实测把 _sim_df 置为 None 后 GET /api/models → **200**（body 1892 字节），所有模型直接可拟合=false、missing_states=[全部状态名]、usable_state_columns=[]",
+        "对照：/api/data(:136-137)、/api/niche(:419-420)、/api/network(:448-449)、/api/fit(:298-299) 在有相同前置条件时都返回 400 {'error':'No simulation data. POST /api/run first.'}"
+      ],
+      "impact": "契约不一致：调用方无法区分「没跑过仿真」与「跑了但状态列全是常量」。前端因为只在 simData 存在时才调用它而暂时不触发，但任何脚本/第三方客户端会拿到一个看似权威的空结论。",
+      "minimal_fix": "在 /api/models 开头与其它端点一致地判空并返回 400（agent_id 与整体两条路径都要覆盖）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "app.py 未出现在工作区 diff 中"
+    },
+    {
+      "id": "C15",
+      "severity": "P3",
+      "title": "viz/plots.py 的 figure 泄漏：25 次调用后 pyplot 全局注册表里留着 25 个 figure，matplotlib 自己发出 'More than 20 figures have been opened' 警告",
+      "evidence": [
+        "plots.py:44-57（以及 :70-93、:113-130、:164-184、:216-251、:288-302、:320-334）都是 `fig, ax = plt.subplots(...)` 后 `return fig`，从不 plt.close；只有传入 save_path 时 savefig（:55-56）也不 close",
+        "实测连续调用 plot_timeseries 25 次：plt.get_fignums() 从 0 涨到 25，warnings 捕获到 'More than 20 figures have been opened. Figures created through the pyplot interface... are retained until explicitly closed'",
+        "传入 save_path 的单次调用后 plt.get_fignums() == 1（仍留在全局注册表）；调用方执行 plt.close('all') 才归零"
+      ],
+      "impact": "在 experiments/ 这类批量出图循环里，figure 会持续累积内存（每个 figure 含 axes/artist，几十 MB 量级取决于数据量），并且 matplotlib 的 20 图警告会污染日志。函数签名返回 Figure，因此调用方「可以」关闭，但库没有提供 close 约定或上下文管理器。",
+      "minimal_fix": "为每个函数增加 `close: bool = False` 参数（save 后 if close: plt.close(fig)），或在文档中明确「调用方必须 close」并提供 plt.close 的示例；批处理路径（examples/experiments）统一用 `fig = ...; fig.savefig(...); plt.close(fig)`。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "viz/plots.py 未出现在工作区 diff 中"
+    },
+    {
+      "id": "C16",
+      "severity": "P3",
+      "title": "同一「模型不适用」在不同 robust 取值下分别返回 200 model_not_applicable 与 400 all_starts_failed，前端后者报错、前者却报「拟合完成」",
+      "evidence": [
+        "app.py:372-385 哨兵命中 → 200 status='model_not_applicable' + warning + predict_trace=[]；app.py:346-350 fit_robust 抛 RuntimeError('All fitting attempts failed.') → 400 status='all_starts_failed'（fitter.py:262-263）",
+        "实测 resource_competition（建议映射 {R1: state_economic_pressure, R2: state_education}）：robust=False → 200 model_not_applicable（fun=1e12、hit_sentinel=true、predict_trace=[]）；robust=True → 400 all_starts_failed（1.5s）",
+        "补充 harness A3 实测：收到 200 哨兵响应时前端渲染了两条 warning（后端 warning + t('fitting.warn_sentinel')）与贴边告警，但 statusText 最终是 'Fit done (R^2=—)'（dashboard.js:653-654 无条件 setStatus('ok', ...)）",
+        "后端错误文案 'Need at least 10 time points, got 9.'（fitter 英文）会直接进中文状态栏（app.py:345 → dashboard.js:625）"
+      ],
+      "impact": "同一种「模型/数据不适用」在 UI 上是两种互斥表现（一条错误 vs 一句「拟合完成」），用户难以形成稳定心智模型；状态栏文案与告警条自相矛盾。",
+      "minimal_fix": "统一语义：把 model_not_applicable 也映射成前端的「未收敛/不适用」状态（例如新增 status='model_not_applicable' 时 setStatus('error', warning) 或专门的 warn 状态），状态栏不要报 fitDone；后端错误文案走 i18n 键或至少加统一前缀。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "app.py / dashboard.js 均未出现在工作区 diff 中；哨兵分支为 HEAD 行为"
+    },
+    {
+      "id": "C17",
+      "severity": "P3",
+      "title": "optimizer_failed（400 + summary）的 summary 诊断在前端被完全丢弃",
+      "evidence": [
+        "app.py:355-364 优化器 success=False 时返回 400 {'error': ..., 'status':'optimizer_failed', 'summary': fitter.summary_json()}",
+        "dashboard.js:625 `if (res.error) { setStatus('error', res.error); return; }` —— 只取 error，看不到 summary 里的 r²/params/params_at_bounds/hit_sentinel；结果卡片与参数胶囊都不更新",
+        "补充 harness A4 实测（fetch 桩返回该分支）：statusText 含后端错误文案，`fitKPIs.innerHTML === \"\"`（诊断不可达）"
+      ],
+      "impact": "后端已经准备了诊断信息却到不了用户眼前，排障只能靠日志（而项目未配置日志）。属可观测性缺陷。",
+      "minimal_fix": "前端在 res.summary 存在时也渲染结果卡片（或至少把 summary.r_squared/params_at_bounds 追加到错误文案里）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "未出现在工作区 diff 中"
+    },
+    {
+      "id": "C18",
+      "severity": "P3",
+      "title": "/api/run 回传 cfg.seed 而不是 Simulation 实际使用的 seed：seed=null 时响应 seed=null，实际却按 42 复现",
+      "evidence": [
+        "app.py:108 `sim = Simulation(env, scheduler=Scheduler('sequential'), seed=cfg.seed)`；core/simulation.py:65-68 `effective_seed = DEFAULT_SEED if seed is None else seed`（DEFAULT_SEED=42）",
+        "app.py:127 返回 `'seed': cfg.seed`（原始请求值）",
+        "实测：seed 缺省 → 响应 seed=42 且两次结果相同；显式 `\"seed\": null` → 响应 {\"seed\": null} 而两次 run 的 sum(state_happiness) 都是 85.176（相同）；seed=7 两次也都相同",
+        "dashboard.js 只把输入值放进请求体（:363），从不读取或展示响应里的 seed"
+      ],
+      "impact": "API 的回执与真实行为不一致（回执会让人以为「无种子=不可复现」）；同时 UI 不显示实际使用的种子，用户无法记录复现实验所需的元数据。",
+      "minimal_fix": "返回 `'seed': sim.seed`（或同时返回 requested_seed/effective_seed），并在 KPI 里显示实际种子。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "app.py / core/simulation.py / dashboard.js 均未出现在工作区 diff 中"
+    },
+    {
+      "id": "C19",
+      "severity": "P3",
+      "title": "state_economic_pressure 在 t=0 只有 Household 行为 null：该状态在 step() 里才创建，与新加入的「记录 t=0 基线」特性不一致",
+      "evidence": [
+        "实测 /api/data（12 步）：state_economic_pressure 的 null 恰好 2 个 = [[time=0, Household, ...], [time=0, Household, ...]]；同表其它成员状态在 Household 行有 242 个 null，而这一列只有 2 个 → 说明 Household 多数时点也有该值（成员状态被 household 聚合/复制），唯独 t=0 缺失",
+        "对照 t=0 行：Household 的 state_happiness=None、state_economic_pressure=None；FamilyMember 的 state_economic_pressure=0.0",
+        "core/simulation.py:73 `self._needs_initial_recording = self.record_initial` 会在第一次 step 之前记录一次基线"
+      ],
+      "impact": "初始记录（拟合用 y_true[0] 作为 ODE 初值）对这一个状态在 Household 行上仍是 NaN；聚合拟合因 groupby.mean 跳过 NaN 而不受影响，但按 agent（Household）拟合时 y0 会是 NaN → solve_ivp 得到无意义/哨兵解。前端 agent 下拉只列 FamilyMember（app.py:141），因此目前只能由 API 直接调用触发。",
+      "minimal_fix": "把 state_economic_pressure 的初始化放进 FamilyMember.__init__/Household.__init__（与其它状态一致），或在首次 record 前统一 flush 一次状态；另可加测试断言「t=0 行的每列 null 模式与 t=1 完全一致」。",
+      "confidence": "medium",
+      "provenance": "committed",
+      "provenance_note": "该状态的创建位置在 family_member.py（family 流，未被我修改）；app.py 记录逻辑未变。与 task-B 报告的 economic_pressure_timing 相互印证"
+    },
+    {
+      "id": "C20",
+      "severity": "P3",
+      "title": "SimConfig 仍无参数白名单与范围校验：未知参数键被静默忽略，steps 可为负",
+      "evidence": [
+        "app.py:37-53 SimConfig 的 params: dict = {} 无键/值约束（families: list[dict] 同样无结构校验）",
+        "实测 POST /api/run {\"steps\":3,\"params\":{\"happines_baseline\":9}}（拼写错误）→ 200 ok，observations=28，参数被忽略且无任何提示（family_member.py 的 _p() 只按 key 取值）",
+        "实测 POST /api/run {\"steps\":-5} → 200 {'status':'ok','steps':-5,'observations':0}（静默空跑）",
+        "实测 params.income_age_spread=0 / randomness='abc' → 500 text/plain（见 C3）"
+      ],
+      "impact": "用户的拼写错误、越界值、负步数既不会报错也不会生效，研究记录里会出现「我设置了 X」而实际未生效的配置；负数步数产生空数据集还会让后续 /api/fit 报 400。",
+      "minimal_fix": "params 用 dict[str, confloat(ge=0)] + 以 DEFAULT_PARAMS 键做白名单（未知键 422 并提示最近的合法键），steps: int = Field(120, ge=1, le=5000)，income_age_spread 用 gt=0。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "未出现在工作区 diff 中；与 C3 同源但可独立修复"
+    },
+    {
+      "id": "C21",
+      "severity": "P3",
+      "title": "i18n 初始化时序未修（首次加载 zh 时参数区是英文/原始键名），且 refreshI18n 会把状态栏重置为 Ready",
+      "evidence": [
+        "dashboard.js:760-763 init 顺序：buildFamilyConfigs(); loadParams(); refreshI18n(); setLang(currentLang); —— loadParams 是 async 且未 await（:248-253），buildParams 在 refreshI18n 之后才注入 DOM",
+        "index.html:20 `<span id=\"statusText\" data-i18n=\"status.ready\">`；dashboard.js:163-166 对所有 [data-i18n] 无差别 textContent = t(key) → 跑完仿真/拟合后切换语言会把「仿真完成」「拟合完成 (R^2=… )」重置为「Ready/就绪」",
+        "首屏影响：若 localStorage 存的是 zh，参数区标签先由 buildParams 用 enLabels/原始键名渲染（:258-268、:274），直到用户手动切一次语言才会翻译"
+      ],
+      "impact": "中文用户首屏看到英文/标识符标签；切换语言会丢失当前操作状态提示（与 round-1 报告同一问题，未修复）。",
+      "minimal_fix": "init 改为 `(async () => { buildFamilyConfigs(); await loadParams(); refreshI18n(); setLang(currentLang); })()`；refreshI18n 跳过 #statusText（或在 refreshI18n 后重新写入最近一次状态消息）。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "dashboard.js / index.html 均未出现在工作区 diff 中"
+    },
+    {
+      "id": "C22",
+      "severity": "P3",
+      "title": "官方前端 harness 存在覆盖缺口：突变 M4（去掉 needs_manual_mapping 的 option disabled）存活",
+      "evidence": [
+        "用字符串替换在 %TEMP% 生成 6 个突变体并设 DASHBOARD_JS 运行 node tools/check_dashboard_behavior.js：M1（去 seq 守卫）失败 3 项、M2（fitSelectionBlocked 恒 false）失败 1 项、M3（去 runFitting 同步重载）失败 1 项、M5（序号不自增）失败 3 项、M6（陈旧响应返回 ready）失败 1 项 —— 均被捕获，证明场景 3/1c/1 有判别力",
+        "M4（把 `if (m.needs_manual_mapping)` 改成 `if (false)`，即不置灰不可映射的 option）→ **全部通过（存活）**",
+        "原因：ALL_DISABLED 场景里所有模型都 needs_manual_mapping=true，于是 anySelectable=false，fitSelectionBlocked 在第一个判断（sel.dataset.allDisabled==='1'）就返回 true，option 级 disabled 从未被检验；而 option 级检查只在「存在可选模型但其名字不在 preferred 列表里、且重建 options 后浏览器选中的是首个非禁用项」时才起决定作用",
+        "反向验证：官方 harness 的 makeElement 只在 id 为 fitModel/fitAgent 时解析 options（:74），因此该守卫的覆盖依赖场景构造"
+      ],
+      "impact": "守卫逻辑里有一处从未被测试真正驱动；未来若有人误改 option 置灰逻辑，harness 不会报警（当前实现本身行为正确，属测试覆盖缺口而非产品缺陷）。",
+      "minimal_fix": "在 tools/check_dashboard_behavior.js 增补场景：/api/models 返回 [{name:'logistic', needs_manual_mapping:true}, {name:'custom_ok', needs_manual_mapping:false}]（custom_ok 不在 preferred 列表里），断言 fitSelectionBlocked() 取决于 custom_ok 被选中；同时把 preferred 命中逻辑也纳入断言。",
+      "confidence": "high",
+      "provenance": "committed",
+      "provenance_note": "tools/check_dashboard_behavior.js 未出现在工作区 diff 中；突变体与运行日志在 %TEMP%\\niche_r2\\"
+    }
+  ],
+  "contract_table": {
+    "note": "后端字段 × 前端消费核对（实测端点字段集合 + grep/行为 harness）。ok=前端正确消费；unused=后端返回但前端从不读取；gap=前端读取但后端缺失或语义不一致。",
+    "endpoints": {
+      "/api/params": {
+        "backend_fields": ["defaults", "groups"],
+        "frontend_use": "dashboard.js:250-251 读取 defaults/groups → buildParams 渲染；实测 8 组 27 参数，与 DEFAULT_PARAMS 集合完全相等",
+        "status": "ok（但 i18n 键缺失 12 个 → C7）"
+      },
+      "/api/run": {
+        "backend_fields": ["status", "steps", "seed", "agents", "observations"],
+        "frontend_use": "dashboard.js:368 只用 error；:377-379 用 steps/agents/observations；status 与 seed 从不读取",
+        "status": "partial（seed 回执与真实不符 C18；422 时 KPI=undefined C8）"
+      },
+      "/api/data": {
+        "backend_fields": ["agents", "columns", "data", "statistics", "steps"],
+        "frontend_use": "dashboard.js:486-492 用 agents；:519-523/659-665 用 data/columns；statistics 与 steps 从不读取",
+        "status": "ok + unused(statistics, C11)；null 语义正确（前端均值 0.537640 == 仅成员均值 0.537640）"
+      },
+      "/api/models": {
+        "backend_fields": ["models[name,state_names,expected_columns,unusable_default_columns,missing_states,directly_fittable,needs_manual_mapping,suggested_mapping]", "available_state_columns", "usable_state_columns", "constant_state_columns", "unverifiable_state_columns"],
+        "frontend_use": "dashboard.js:433 建索引；:440-444 用 needs_manual_mapping/directly_fittable；:475-481 用 suggested_mapping；unusable_default_columns / missing_states / expected_columns / 4 个顶层列清单全部未使用",
+        "status": "partial（缺列原因不可见 C5；建议映射语义可疑 C1）"
+      },
+      "/api/fit": {
+        "backend_fields_ok": ["status", "model", "state_columns", "summary", "predict_trace", "warning"],
+        "backend_fields_400": ["error", "status"],
+        "backend_fields_sentinel_200": ["status", "model", "state_columns", "summary", "predict_trace", "prediction_skipped", "warning"],
+        "summary_fields": ["model", "params", "r_squared", "converged", "n_params", "n_states", "state_names", "state_columns", "fun", "hit_sentinel", "params_at_bounds", "bounds"],
+        "frontend_use": "dashboard.js:625 用 error；:630-650 用 summary.r_squared/converged/params/hit_sentinel/params_at_bounds 与 warning；:664 用 predict_trace；state_columns / prediction_skipped / status / model / fun / bounds 未使用",
+        "status": "ok for displayed fields（warning 与 params_at_bounds 确实可达：harness A3 实测渲染）；gap: state_columns 不展示 → C1/C5；sentinel 时状态栏仍报 fitDone → C16"
+      },
+      "/api/niche": {
+        "backend_fields": ["niches[id,name,role,position{economic,cultural,social,emotional}]"],
+        "frontend_use": "dashboard.js:557-562 用 position.economic/social 与 name/role",
+        "status": "ok 结构；语义退化 social≡1.0（C10）"
+      },
+      "/api/network": {
+        "backend_fields": ["networks[name,nodes[id,name,role],edges[source,target,weight,conflict,trust]]"],
+        "frontend_use": "dashboard.js:710-747 全部字段均被使用（节点角度布局、边宽=weight*4、边色按 conflict 分档、hover 文案 trust/conflict）",
+        "status": "ok"
+      }
+    }
+  },
+  "race_tests": {
+    "official_harness_baseline": "node tools/check_dashboard_behavior.js → 全部 PASS（exit 0），含场景 0/1/1b/1c/2/3/4",
+    "mutation_matrix": {
+      "m1_no_seq_guard": "FAIL 3 项（陈旧调用自报 stale / 最终采用最新请求 / 陈旧响应未覆盖）→ 守卫有效",
+      "m2_blocked_false": "FAIL 1 项（fitSelectionBlocked 返回 true）→ 拦截有效",
+      "m3_no_sync_reload": "FAIL 1 项（映射已刷新为 B 的列）→ runFitting 的同步重载有效",
+      "m4_no_disabled_option": "全部通过 → 存活突变，见 C22 覆盖缺口",
+      "m5_no_seq_increment": "FAIL 3 项 → 序号自增是守卫的必要部分",
+      "m6_stale_as_ready": "FAIL 1 项（陈旧调用自报 stale）→ 断言直指返回值而非终态，具有判别力"
+    },
+    "counterexample_found": "C6：把「更晚的 loadModelInfo」插到 runFitting 内部重载与响应之间时，runFitting 命中 stale 分支裸 return → 0 次 /api/fit、statusText 永久为 'Fitting...'。该反例无法被官方场景 3 覆盖（它只验证 loadModelInfo 的返回值，不验证 runFitting 的 stale 收尾）。"
+  },
+  "ml_viz_checks": {
+    "ml_features_head": "X(847,3) 中 726 个 0 全为 fillna 伪造；y(847,) 中 247 个 0（29.1617%）全部是「无真实下一步」的行（242 Household + 5 末步）；真实 0 值 0 行",
+    "ml_features_worktree": "X(600,3)/y(600,)，无 NaN、无 0 伪造，与 ground-truth 的 600 个 (t,t+1) 配对逐元素一致",
+    "ml_features_default_columns": "X(0,17) 空集（完整案例过滤把混合 agent 类型面板全部滤掉）",
+    "build_transition_dataset": "shape (240,34)，含 NaN 行占比 1.0",
+    "build_network_features": "shape (4,69)，112 个 NaN 单元格",
+    "recorder_nan_contract": "to_dataframe 保留 NaN（847 行 24 列，5760+ NaN）；to_statistics_dataframe 丢弃 NaN 并给出 n/mean/std(ddof=0)/min/max，逐行重算 0 失配；但包含 attr_age（与 docstring 冲突）",
+    "api_data_nulls": "成员状态列 242 个 null（2 Household×121）、Household 状态列 605 个 null（5 成员×121）、state_economic_pressure 仅 2 个 null（t=0 的 2 个 Household）；原始字节无 NaN/Infinity 字面量；前端跳过 null 的均值与仅成员均值完全相等（0.537640 / 0.882920）",
+    "viz_figure_leak": "25 次 plot_timeseries → plt.get_fignums() 25，并触发 matplotlib 'More than 20 figures' 警告；save_path 分支同样不 close",
+    "viz_backend_side_effect": "matplotlib.use('svg') → import family_abm → get_backend()='Agg'；先 import pyplot(tkagg) → import family_abm → 'Agg'；rcParams['axes.grid'] False→True"
+  },
+  "measurements": {
+    "run_config": "Python 3.14.3；fastapi 0.136.1 / starlette 1.0.0 / pydantic 2.12.5 / pandas 3.0.2 / numpy 2.4.3 / scipy 1.17.1；TestClient 默认 families、steps=60–120；uvicorn 临时端口 8611",
+    "api_params": "8 组 27 参数（Education1/Income4/Health3/Stress6/Happiness6/Noise1/FamilySupport4/Other2），分组集合与 DEFAULT_PARAMS 完全相等，过滤逻辑 app.py:91-94 生效（无键被丢）",
+    "api_data_payload": "120 步默认 families：847 条记录（121 时点×7 agent）、24 列、511240 字节、耗时 0.03s；其中 statistics 18 行 2821 字节且前端不消费",
+    "api_models": "usable 11 列 / constant 5 列（state_cultural_level、state_housing_quality、state_neighborhood_quality、state_savings、state_social_capital）/ unverifiable 0；无数据时 200（C14）",
+    "api_fit_suggested_mapping_results": "square_law r²=-2368436.782433 conv=True；linear_law r²=-41.534419 conv=True；logistic r²=-52.248372 conv=True；lotka_volterra r²=-41.551993 conv=True；influence r²=0.690949 conv=True；wellbeing r²=0.953149 conv=True；resource_competition 200 model_not_applicable(hit_sentinel)",
+    "fit_timing": "wellbeing robust=False 28.02–30.60s；wellbeing robust=True 22.43s(TestClient)/38.39s(uvicorn)；square_law robust=True 41.66s；influence robust=True 19.95–20.55s；logistic robust=False 0.05s",
+    "event_loop_blocking": "uvicorn 8611：wellbeing robust=True 38.39s；期间 GET /api/params 延迟 37.39s，结束后 0.001s；全仓库无 run_in_threadpool/asyncio.to_thread（grep 0 命中）",
+    "error_code_matrix": {
+      "fit_unknown_model": "400 unknown_model（结构化）",
+      "fit_agent_not_found": "400 invalid_input（'数据中没有 agent_id=...'）",
+      "fit_mapping_non_numeric": "400 invalid_mapping（结构化，含可用列清单）",
+      "fit_mapping_missing_column": "400 invalid_input（含期望列名与可用状态列）",
+      "fit_insufficient_points": "400 invalid_input（英文文案 'Need at least 10 time points, got 9.'）",
+      "run_age_NaN_then_data": "200 → /api/data 500 text/plain",
+      "run_age_old": "500 text/plain",
+      "run_missing_family_name": "500 text/plain",
+      "run_member_unknown_key": "500 text/plain",
+      "run_income_age_spread_0": "500 text/plain",
+      "run_params_non_numeric": "500 text/plain",
+      "run_unknown_param_key": "200（静默忽略）",
+      "run_steps_negative": "200 observations=0",
+      "models_no_data": "200（应为 400）"
+    },
+    "seed_contract": "缺省→响应 42（两次 sum 相同 85.176）；seed=7→两次相同 82.0394；显式 null→响应 seed=null 但两次仍相同 85.176（effective 42）",
+    "niche": "5 个 agent social 全为 1.0000；economic 0.0013–0.1236；cultural 0.34–0.61；emotional 0.44–0.53；原始字节无 NaN",
+    "harness_ext": "%TEMP%\\niche_r2\\harness_ext.js 共 26 条断言：25 PASS + 1 FAIL（A6 i18n 缺 12 键）；其中标注【缺陷】的 A1/A3/A4/A5a/A5b 均为「复现出问题」的 PASS",
+    "pytest": "python -X utf8 -m pytest tests/test_data_contract.py tests/test_features_nan.py -q -p no:cacheprovider → 17 passed（从 %TEMP% 运行，缓存与 bytecode 已禁用）"
+  },
+  "round1_regressions": {
+    "fixed_since_round1": [
+      "/api/data 不再 fillna(0)：缺失值传 null（app.py:154-158），前端图表跳过 null（dashboard.js:526-538），实测前端均值 0.537640 与仅 FamilyMember 均值完全一致（round-1 偏差 -28.6% 消失）",
+      "/api/fit 不再静默猜列：新增 /api/models + FitRequest.state_mapping（app.py:55-62、207-274），非数值列/缺列返回 400 并给出可用列（实测）",
+      "哨兵解处理顺序正确：app.py:368-385 先判 hit_sentinel 再 predict，实测返回 200 + warning + predict_trace=[]，未误报 500 prediction_failed",
+      "/api/fit 具备函数级兜底（ValueError/RuntimeError/Exception → 结构化 400/500），未知模型不再 500（实测 400 unknown_model）",
+      "打包：pyproject.toml 补全 build-system/dependencies(含 scipy/matplotlib/fastapi/uvicorn/jinja2/pydantic)/classifiers/license/MANIFEST.in/[tool.setuptools.package-data]（pyproject.toml:1-120），round-1 的 P1-3/P1-4 已修复",
+      "复现性：Simulation 始终建独立 random.Random(seed)，默认 DEFAULT_SEED=42（core/simulation.py:61-70），实测同 seed 两次结果一致",
+      "warnings 可见：前端渲染 res.warning / hit_sentinel / params_at_bounds / r²<=0 四类告警（dashboard.js:630-647，harness A3 实测）",
+      "前端竞态守卫真实有效：官方 harness 场景 3 + 5 个突变体证明 _modelInfoSeq / 序号自增 / stale 返回值断言都有判别力"
+    ],
+    "still_open_from_round1": [
+      "/api/fit 仍在事件循环内同步执行（C4，round-1 P1-1；实测阻塞 37.39s）",
+      "/api/niche 的 social 维度恒为 1.0（C10，round-1 P2-1）",
+      "/api/run 的参数/请求体无校验（C3/C20，round-1 P2-4；income_age_spread=0 仍 500，而 UI 仍 min=\"0\"）",
+      "Plotly.js 仍只有 CDN、无本地回退与 SRI（index.html:8；round-1 P2-4）",
+      "i18n 初始化时序（loadParams 未 await）与 refreshI18n 重置 #statusText（C21，round-1 P2-1/P3）",
+      "前端 agent/家庭名仍直接进 innerHTML（dashboard.js:487、711；round-1 P2-3 XSS，未复核修复——本轮未新增证据，沿用 round-1 结论）",
+      "参数输入仍统一 min=\"0\" max=\"5\" step=\"0.001\"（dashboard.js:275），与 income_age_peak=45 / income_age_spread=18 的默认值冲突（round-1 P2-5；本轮未复核）"
+    ],
+    "fixed_by_uncommitted_changes": [
+      "ml/features.py 的 fillna(0) 标签伪造已在工作区修复（并有新增未跟踪测试 tests/test_features_nan.py），但 HEAD/v0.1.0 仍是缺陷版本（C2）"
+    ]
+  },
+  "uncertainties": [
+    "prediction_failed（500）分支只在 predict 抛异常且 hit_sentinel=false 时可达；本轮穷举 7 个模型 × robust 两档 × 建议映射均未触发（resource_competition 走的是 all_starts_failed），因此该分支只有代码级证据（app.py:387-404），标为未实测。",
+    "optimizer_failed（400 + summary，app.py:355-364）需要 result.success=False 且 best_result 非 None；本轮未构造出该组合（实测要么 success=True 要么 all_starts_failed），同样只有代码级证据；C17 的前端丢弃行为是用 fetch 桩（harness A4）验证的。",
+    "C19 的 t=0 null 只在 /api/data 的聚合视图上验证（2 个 Household 行）；其下游后果（Household 作为 agent 的 y0=NaN）未端到端复现，因为前端 agent 下拉只暴露 FamilyMember。",
+    "C22 的 M4 突变体在当前实现下可能部分等价（浏览器不允许选中 disabled option），我给出的「覆盖缺口」以「可选模型名不在 preferred 列表」这一构造为依据；若认为该构造不可达，可把 C22 降级为信息项。",
+    "工作区不干净：除 ml/features.py 外的范围内文件与 HEAD 一致（已用 git diff --stat HEAD + sha256 固定），但若在我审查期间有其它 teammate 继续写入这些路径，报告结论需按 §file_sha256_at_audit 复核。"
+  ],
+  "baseline": {
+    "identity": "commit fe56135（v0.1.0）+ 范围内仅 family_abm/ml/features.py 与 tests/test_features_nan.py 为未提交改动",
+    "not_pure_v010": "整仓库工作区含 891 行未提交 diff（README/audits/docs/examples/experiments/family_abm/core|family|ml|niche + requirements.txt + tests），因此本报告只在范围内保证『与 HEAD 一致』",
+    "dirty_files_in_scope": ["family_abm/ml/features.py (M)", "tests/test_features_nan.py (??)"],
+    "clean_vs_head_in_scope": ["family_abm/web/app.py", "family_abm/web/__main__.py", "family_abm/web/__init__.py", "family_abm/web/templates/index.html", "family_abm/web/static/js/dashboard.js", "family_abm/web/static/css/style.css", "family_abm/ml/recorder.py", "family_abm/viz/plots.py", "tools/check_dashboard_behavior.js", "tests/test_data_contract.py"],
+    "provenance_method": "git status --porcelain -- <scope>; git diff --stat HEAD -- <scope>; git show HEAD:<file> 对比关键行为；Get-FileHash -Algorithm SHA256 记录审查时内容"
+  },
+  "severity_distribution": {
+    "P1": 4,
+    "P2": 10,
+    "P3": 8
+  },
+  "provenance_distribution": {
+    "committed": 21,
+    "committed_defect_with_uncommitted_fix_available": 1
+  },
+  "environment_cleanup": {
+    "temporary_servers": "uvicorn 127.0.0.1:8611 用于并发/阻塞验证，已 job_kill；Test-NetConnection 8611=False、8599=False（此前一轮的端口也已关闭）",
+    "repo_writes": "无。所有脚本、突变体、harness 副本、HEAD features 导出包均在 %TEMP%\\niche_r2\\；python 一律 PYTHONDONTWRITEBYTECODE=1，pytest 用 -p no:cacheprovider"
+  }
+}

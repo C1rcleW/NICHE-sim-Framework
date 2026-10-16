@@ -1,0 +1,729 @@
+{
+  "stream": "D",
+  "task": "task-9",
+  "commit": "fe56135",
+  "tag": {
+    "v0.1.0": "c65752e49c46c86da925d79961f4b058b910ca95",
+    "describe": "v0.1.0-1-gfe56135"
+  },
+  "working_tree": "dirty at audit time (pre-existing, NOT caused by this audit): 32 entries = 28 modified tracked files + 4 untracked tests (test_examples_smoke.py, test_experiments.py, test_features_nan.py, test_registration.py). 本次审查未修改被跟踪文件：所有漂移实验在 %TEMP%\\niche_infra_copy 的完整副本（含 .git）中进行，每次突变后从备份还原并用 sha256 校验（drift_experiments[].restored_sha_match 全为 true）。",
+  "scope": [
+    "pyproject.toml",
+    "MANIFEST.in",
+    ".gitignore",
+    ".gitattributes",
+    "requirements.txt",
+    "setup.py",
+    "LICENSE",
+    "CITATION.cff",
+    "CHANGELOG.md",
+    "README.md",
+    "CONTRIBUTING.md",
+    ".github/workflows/ci.yml",
+    "tools/baseline.py",
+    "tools/sync_requirements.py",
+    "tools/export_research_md.py",
+    "tools/extract_release_notes.py",
+    "tools/verify_install.py",
+    "tools/build_research_doc.py",
+    "tests/test_packaging.py",
+    "tests/test_readme_consistency.py",
+    "tests/test_docs_consistency.py",
+    "tests/test_examples_smoke.py",
+    "tests/test_experiments.py",
+    "tests/test_features_nan.py",
+    "tests/test_registration.py",
+    "tests/conftest.py",
+    "family_abm/__init__.py",
+    "family_abm/web/app.py",
+    "family_abm/ml/features.py",
+    "baseline/default_seed42.json",
+    "docs/研究设计文档.docx",
+    "docs/研究设计.md"
+  ],
+  "file_sha256_at_audit": {
+    "pyproject.toml": "6e4787c0bccccbdf",
+    "MANIFEST.in": "25478d05bdaf5194",
+    ".gitignore": "cdc903b38910beef",
+    ".gitattributes": "85004f7f74c9149f",
+    "requirements.txt": "d7c06e66681aa5a4",
+    "setup.py": "c416e9be284e3ad8",
+    "LICENSE": "92430fbfe05c8747",
+    "CITATION.cff": "dc285d63a1574d62",
+    "CHANGELOG.md": "a6626a332e92923e",
+    "README.md": "afd263eeb45e6927",
+    "CONTRIBUTING.md": "34cd7410fbf8aef3",
+    ".github/workflows/ci.yml": "73055fc31014c85d",
+    "tools/baseline.py": "a936dd588b7e9211",
+    "tools/sync_requirements.py": "d43300315a2d9705",
+    "tools/export_research_md.py": "ddca7bd18d2d33d1",
+    "tools/extract_release_notes.py": "f0c2e6b4fecf2438",
+    "tools/verify_install.py": "c1a29d84295a711a",
+    "tools/build_research_doc.py": "15cbb20f98abcfd0",
+    "tests/test_packaging.py": "84f7ddfefeaf84c7",
+    "tests/test_readme_consistency.py": "c92531f8c7a0cc47",
+    "tests/test_docs_consistency.py": "b8480ef717eac313",
+    "tests/test_examples_smoke.py": "b0f6feaa7c2c51b2",
+    "tests/test_experiments.py": "253e9d0aeec3b5b1",
+    "tests/test_features_nan.py": "e72182ae4a98313a",
+    "tests/test_registration.py": "14e1000d70a03fc3",
+    "tests/conftest.py": "f6cfc1630990ab4b",
+    "family_abm/__init__.py": "46b1a238fbbe439b",
+    "family_abm/web/app.py": "da687626c2d36953",
+    "family_abm/ml/features.py": "f2da42a9d18e8948",
+    "baseline/default_seed42.json": "f6f040ba5f8b5093",
+    "docs/研究设计文档.docx": "95eef5f1c173d837",
+    "docs/研究设计.md": "d3785fa64cc5e83a"
+  },
+  "method": [
+    "只读阅读 + 静态分析：pyproject/MANIFEST/.gitignore/.gitattributes/CI/tools/tests/docs(README,CHANGELOG,CITATION,CONTRIBUTING,release-notes)",
+    "可执行验证：python -X utf8 -m pytest（目标三文件、全量、以及 sitecustomize 突变环境）",
+    "漂移实验：把仓库完整复制到 %TEMP%\\niche_infra_copy，逐个制造漂移 → 运行对应守卫 → 记录 exit code → 还原并校验 sha256",
+    "产物洁净度：在 %TEMP% 的 staged 源上 python -m build（wheel+sdist），枚举内容；用 %TEMP%\\venv_sd70（setuptools 70）复现构建下限问题",
+    "lint 复现：%TEMP%\\venv_ruff 安装 ruff==0.17.0（与 CI 钉版本一致）后对 CI 范围、examples、全仓分别 ruff check",
+    "版本/CI 分析：git tag/HEAD/status/diff、app.openapi()['info']['version']、ci.yml 全文检索 needs/permissions/sdist 等"
+  ],
+  "verdict": {
+    "question": "地基（打包/CI/文档/测试判别力）是否夯实？",
+    "answer": "部分夯实：链的下游（pyproject→requirements runtime 方向、DOCX→md、代码→baseline、README 参数总数）都有真实守卫，且漂移实验证明它们会失败；但链的上游与旁支共 5 处无守卫或守卫可被绕过（requirements extras 方向、README 参数分组、generator→DOCX、CHANGELOG/release-notes、sdist），另有 2 处会直接产出错误对外内容（发布说明硬编码 0.1.0 安装命令、web app 版本 0.2.0 与包版本 0.1.0 不一致）与 1 处发布完整性风险（tag 早于未提交的修复、4 个新测试未入库）。CI 骨架正确（触发、矩阵、pip 隔离、干净安装冒烟、钉版本 ruff）但 release 无 needs、完全不验证 sdist、packaging 用例可被环境整体跳过。",
+    "closed_chains": [
+      "pyproject dependencies -> requirements.txt（runtime 方向，1a/1c 实测会失败）",
+      "代码行为 -> baseline/default_seed42.json（4 实测会失败 + 两次运行字节一致）",
+      "DOCX -> docs/研究设计.md（3a 实测会失败）",
+      "DEFAULT_PARAMS -> README 参数总数（2a 实测会失败）",
+      "tools/verify_install.py 的假绿防护（httpx 缺失必须失败、仓库副本诚实性检查）"
+    ],
+    "open_chains": [
+      "pyproject extras -> requirements.txt（1b 实测盲区）",
+      "DEFAULT_PARAMS 分组 -> README 明细（2b 实测盲区）",
+      "build_research_doc.py -> DOCX（3b 实测盲区，链顶无 --check）",
+      "CHANGELOG -> 发布说明/实现（G1 实测盲区）",
+      "MANIFEST.in/CHANGELOG -> sdist 内容（无任何测试）",
+      "tag/版本 -> 产物内容（tag 早于工作区修复；同一 0.1.0 两套内容）",
+      "包版本 -> app.py 版本（0.1.0 vs 0.2.0）"
+    ]
+  },
+  "findings": [
+    {
+      "id": "D1",
+      "severity": "P1",
+      "title": "已发布 tag v0.1.0 早于 HEAD，且工作区 32 项未提交（含 4 个未跟踪的新测试）——同一版本号存在两套内容，回归守卫可能丢失",
+      "evidence": [
+        "git rev-list -n1 v0.1.0 -> c65752e49c46c86da925d79961f4b058b910ca95；git describe --tags -> v0.1.0-1-gfe56135；git log --oneline v0.1.0..HEAD -> 'fe56135 docs(readme): 补全发布流程说明'",
+        "git status --porcelain -> 32 条：28 个 M（family_abm/ml/features.py、family_abm/core/environment.py、family_abm/family/{family_member,household,influence,relationships}.py、examples/{ml_ready,fitting_viz_demo}.py、README.md、requirements.txt、baseline/default_seed42.json、docs/release-notes-0.1.0.md、tests/{test_influence,test_simulation_and_fitting}.py、experiments/* 等）+ 4 个 ??（tests/test_examples_smoke.py、tests/test_experiments.py、tests/test_features_nan.py、tests/test_registration.py）",
+        "git show v0.1.0:family_abm/ml/features.py | Select-String fillna -> 仍有两处 fillna(0)（X 与 y）；工作区版本已无 fillna（第 1 轮 P1 已修）→ tag 的产物包含未修版本",
+        ".github/workflows/ci.yml:112 actions/checkout@v4（tag 事件检出该 tag）；release job 从 tag 构建 → 发布的 v0.1.0 产物 ≠ 当前仓库内容",
+        "本机实测：工作区 ml/features.py sha256[0:16]=f2da42a9d18e8948（无 fillna）；README.md/CHANGELOG 对缺失值契约的说法也不一致（见 D2）"
+      ],
+      "impact": "用户安装的 0.1.0 wheel 与仓库现状行为不同（含第 1 轮所有 P1 缺陷）；保护这些修复的 4 个测试文件未入库，git clean/切换机器即永久丢失，下一轮修复会在无守卫状态下重新引入；同一 0.1.0 存在两套内容，无法追溯某产物对应哪个提交",
+      "minimal_fix": "先提交 28 项修改 + 4 个新测试（若内容变更按语义化版本记入 0.1.1），再把新 tag 指向该提交并让 release job 重跑；CI 增加守卫：tag 推送时断言 git status --porcelain 为空且工作区 HEAD == GITHUB_SHA",
+      "confidence": "high"
+    },
+    {
+      "id": "D2",
+      "severity": "P2",
+      "title": "CHANGELOG 与已发布的 release notes 仍声称 FeatureExtractor '用 0 填充'，与 README/实现相反；该派生链无任何测试",
+      "evidence": [
+        "CHANGELOG.md:113 '`FeatureExtractor` 的缺失值处理用 0 填充，用于监督学习前需自行处理'；docs/release-notes-0.1.0.md:146 同句（git grep -E '填 *0|用 0 填充' 命中两处）",
+        "README.md:335-337 '`extract_features` 不填 0，按完整案例丢弃…填 0 会伪造观测与监督信号'；工作区 family_abm/ml/features.py 已无 fillna",
+        "漂移实验 G1（在副本中给 CHANGELOG 注入 '## [0.1.1]' 段并写入被篡改的说法）：pytest tests/test_readme_consistency.py tests/test_docs_consistency.py tests/test_packaging.py -q -> exit 0（26 passed），即 CHANGELOG 完全无守卫",
+        "tools/extract_release_notes.py 从 CHANGELOG 派生发布说明：篡改后 extract 0.1.1 的输出里 '用 0 填充' in text = True，错误说法被自动带进下一次 Release 正文"
+      ],
+      "impact": "发布说明（用户最容易读到的权威文档）描述了一个已废弃的契约；用户会据此手工处理 NaN 或误判 API 行为；该矛盾可无限期静默存在",
+      "minimal_fix": "修正 CHANGELOG.md:113 与 docs/release-notes-0.1.0.md:146 的措辞（并在 0.1.1 段落记录契约变更）；新增守卫：断言 README 的缺失值契约句与 CHANGELOG/release-notes 不矛盾（或断言 release-notes 由 extract_release_notes 派生且与 CHANGELOG 同步）",
+      "confidence": "high"
+    },
+    {
+      "id": "D3",
+      "severity": "P2",
+      "title": "构建系统下限 setuptools>=61 与所用 PEP 639 元数据（license / license-files，需 >=77）不符：旧 setuptools 环境构建直接失败",
+      "evidence": [
+        "pyproject.toml:2 requires = [\"setuptools>=61\"]；:28 license = \"MIT\"；:29 license-files = [\"LICENSE\"]",
+        "实测：%TEMP%\\venv_sd70 安装 setuptools==70.0.0 后 python -m build --no-isolation --outdir ... <staged> -> exit 1",
+        "   stderr: ValueError: invalid pyproject.toml config: `project.license`. configuration error: `project.license` must be valid exactly by one definition (2 matches found) ... ERROR Backend subprocess exited when trying to invoke get_requires_for_build_sdist",
+        "本机默认隔离构建（setuptools 82.0.1）成功；wheel METADATA 含 'License-Expression: MIT' 与 'License-File: LICENSE'（PEP 639 生效）"
+      ],
+      "impact": "任何按声明解析到 setuptools 61–76 的环境（离线/内网镜像/HPC、--no-isolation、锁定的构建环境）都无法构建，报错信息与'版本下限'声明不符；默认 pip 会解析最新版所以常态绿，属脆弱而非必然失败",
+      "minimal_fix": "requires = [\"setuptools>=77\"]（与 PEP 639 特性匹配）；可在 CI 增加一个 --no-isolation 构建矩阵项以防再退化",
+      "confidence": "high"
+    },
+    {
+      "id": "D4",
+      "severity": "P2",
+      "title": "tools/extract_release_notes.py 把 0.1.0 的 wheel 文件名写死在前言：后续版本的 Release 说明安装命令必然错误",
+      "evidence": [
+        "tools/extract_release_notes.py:51 PREAMBLE 常量内 'pip install family_abm-0.1.0-py3-none-any.whl'（与 version 参数无关）",
+        "README.md:414-416 指示发布流程第 4 步 python tools/extract_release_notes.py 0.1.1 docs/release-notes-0.1.1.md",
+        "实测（副本）：给 CHANGELOG 注入 '## [0.1.1]' 段后运行 extract_release_notes.py 0.1.1 <tmp> -> exit 0，生成文件仍含 'pip install family_abm-0.1.0-py3-none-any.whl'"
+      ],
+      "impact": "每一次后续发布都会在 Release 正文里给出上一版文件名，用户复制即装错版本；工具无测试覆盖",
+      "minimal_fix": "PREAMBLE 改为 f-string/format 注入 version（pip install family_abm-{version}-py3-none-any.whl）；加测试：注入假版本后断言输出含该版本、不含其它版本号",
+      "confidence": "high"
+    },
+    {
+      "id": "D5",
+      "severity": "P2",
+      "title": "requirements.txt 镜像在 extras 方向无守卫：pytest 绿灯但工具报不一致",
+      "evidence": [
+        "漂移实验 1b（副本）删除 'networkx>=2.6' 行后：pytest tests/test_packaging.py::test_requirements_matches_pyproject -q -> exit 0（绿）；python tools/sync_requirements.py --check -> exit 1 '[FAIL] requirements.txt 与 pyproject.toml 不一致'",
+        "原因：tests/test_packaging.py:141 missing 只算 runtime；:144 undeclared 只查'多了什么'，不查 extras 是否齐全",
+        "阳性对照 1a：requirements 里 numpy>=1.21.0 -> numpy>=9.9.9 -> 测试失败（tests/test_packaging.py:149 AssertionError）；1c：从 pyproject 删 pydantic -> 测试失败（:145）"
+      ],
+      "impact": "pip install -r requirements.txt 可能缺 [viz]/[dev] 依赖而 CI 全绿；networkx 缺失只在 plot_family_network() 运行期才暴露",
+      "minimal_fix": "把该测试改成双向完全一致（runtime 与 extras 都要求集合相等），或直接在 CI 增加 python tools/sync_requirements.py --check",
+      "confidence": "high"
+    },
+    {
+      "id": "D6",
+      "severity": "P2",
+      "title": "sdist 完全没有测试覆盖，release job 只做文件名子串校验",
+      "evidence": [
+        "全文检索 tests/ 中的 sdist/tar.gz/--wheel：只有 tests/test_packaging.py:46 注释与 :222 `python -m build --wheel` —— 没有任何测试构建 sdist",
+        ".github/workflows/ci.yml:87 python -m build --wheel；:132-137 版本校验只在 dist/* 的文件名里搜 tag 版本子串，不检查 sdist 是否存在、是否含顶层文档",
+        "实测（副本 staged 源 + python -m build --outdir %TEMP%\\dist_probe）exit 0，产出 family_abm-0.1.0.tar.gz（59 members）：含 CHANGELOG.md/CONTRIBUTING.md/CITATION.cff/LICENSE/README.md/pyproject.toml/setup.py；不含 tests/ tools/ docs/ audits/ experiments/ baseline/，无 .pyc",
+        "git log 显示 c65752e 'fix(packaging): sdist 缺少 CHANGELOG 等顶层文档' —— 该回归真实发生过，如今仍无守卫"
+      ],
+      "impact": "MANIFEST.in 变动可静默破坏 sdist（用户从源码包安装时缺文档/缺文件），CI 仍绿；发布产物中的 sdist 从未被安装验证",
+      "minimal_fix": "packaging fixture 同时构建 sdist（或新增 test_sdist_contains_top_level_docs），断言顶层含 CHANGELOG/CONTRIBUTING/CITATION/LICENSE/README；CI package job 增加 'python -m build'（不带 --wheel）并从 sdist 安装冒烟",
+      "confidence": "high"
+    },
+    {
+      "id": "D7",
+      "severity": "P2",
+      "title": "release job 没有 needs：测试失败也会创建 Release 并上传产物",
+      "evidence": [
+        "Select-String 'needs:' .github/workflows/ci.yml -> 无命中（全文 157 行没有任何 job 依赖声明）",
+        "release job 定义在 ci.yml:101-157，仅由 if: startsWith(github.ref, 'refs/tags/v') 触发，与 lint(:16)/test(:32)/package(:75) 并行；:150-157 直接 gh release create/upload --clobber"
+      ],
+      "impact": "带缺陷的提交只要打了 tag 就会对外发布不可撤回的 Release 与产物；'产物只在通过验证后发布'的隐含承诺不成立",
+      "minimal_fix": "release: needs: [lint, test, package]（必要时加 test-windows）；可再要求 environment 保护",
+      "confidence": "high"
+    },
+    {
+      "id": "D8",
+      "severity": "P2",
+      "title": "版本声明不一致：web/app.py 仍是 0.2.0，/openapi.json 对外暴露 0.2.0",
+      "evidence": [
+        "family_abm/web/app.py:26 app = FastAPI(title='Family ABM Dashboard', version='0.2.0')",
+        "实测 app.openapi()['info']['version'] -> '0.2.0'（通过 fastapi.testclient 导入副本）",
+        "其余声明均为 0.1.0：pyproject.toml:7、family_abm/__init__.py:6、README.md:383/397、CITATION.cff:18、CHANGELOG.md:9、docs/研究设计.md:7、docs/release-notes-0.1.0.md",
+        "tests 中仅有 test_package_version_matches_pyproject（pyproject↔__init__，tests/test_packaging.py:171-176），没有 app.version 断言"
+      ],
+      "impact": "/docs、/openapi.json、前端调试看到的版本与包版本不同，用户报障时给出错误版本信息；版本号是'单一真源'链上的公开声明",
+      "minimal_fix": "app.py 改为 from family_abm import __version__; FastAPI(..., version=__version__)，并加测试断言 app.version == family_abm.__version__ == pyproject version",
+      "confidence": "high",
+      "provenance_note": "与 stream C（web 契约）范围相邻，但属本任务'版本号一致性'清单，故记录"
+    },
+    {
+      "id": "D9",
+      "severity": "P2",
+      "title": "packaging 测试的 skip 条件过宽：缺 build 或 pip 异常时整套件 SKIPPED 且 exit 0",
+      "evidence": [
+        "tests/test_packaging.py:226 build 失败且消息含 'No module named' -> pytest.skip；:238 pip install --target 任何非 0 返回 -> pytest.skip",
+        "实测 A：sitecustomize 使 import build 抛 ModuleNotFoundError(\"No module named 'build'\") 后 pytest tests/test_packaging.py -q -rs -> exit 0，SKIPPED（'环境缺少构建工具：… No module named 'build''），13 项依赖 fixture 的测试全部未执行",
+        "实测 B：sitecustomize 屏蔽 pip 后 pytest tests/test_packaging.py::test_installed_copy_starts_web_app -q -rs -> exit 0，SKIPPED（'环境缺少构建工具：ERROR …'）"
+      ],
+      "impact": "本地或受限环境（未装 dev extra、pip 受限、磁盘/杀软问题）看到'全绿'，而 wheel 资源、元数据、安装冒烟、HTTP 端到端从未执行——正是 P1『wheel 缺 web 资源』的回归守卫；CI 有 dev extra 所以常态能跑，但守卫可被环境静默关闭",
+      "minimal_fix": "仅在显式选择时跳过（如无 CI 环境变量时 skip，CI=true 时 fail）；或把 skip 原因分级并让 CI 断言 packaging 用例数>0（例如 --deselect 计数或 pytest -m packaging --co | wc -l）",
+      "confidence": "high"
+    },
+    {
+      "id": "D10",
+      "severity": "P2",
+      "title": "DEFAULT_PARAMS→README 只有总数守卫，分组明细（Education 1／Income 4／…）可任意漂移而不报警",
+      "evidence": [
+        "漂移实验 2b（副本）：README.md:211 'Education 1 ／ Income 4 ／ Health 3 ／ Stress 4+2 ／' 改为 'Education 9 ／ Income 9 ／ Health 9 ／ Stress 9+9 ／' -> pytest tests/test_readme_consistency.py -q -> exit 0（8 passed）",
+        "阳性对照 2a：README '27 个动力学参数' -> '26' -> 失败（tests/test_readme_consistency.py:62 assert 26 == 27）",
+        "实测 len(DEFAULT_PARAMS)=27，分组 1/4/3/(4+2)/6/1/6=27，与 README 当前文字相符"
+      ],
+      "impact": "README 的参数分组说明（用户配置 27 个参数的入口）与实际参数集合可静默分叉；未来把参数挪组或改名，文档不会失败",
+      "minimal_fix": "让参数分组成为代码里的真源（如 web 层 PARAM_GROUPS 或 family_member.PARAM_GROUPS），README 分组表由测试对照该真源；至少断言各组计数之和 == len(DEFAULT_PARAMS)",
+      "confidence": "high"
+    },
+    {
+      "id": "D11",
+      "severity": "P2",
+      "title": "docx 派生链的顶部（tools/build_research_doc.py → DOCX）无守卫，且脚本没有 --check",
+      "evidence": [
+        "漂移实验 3b（副本）：编辑 tools/build_research_doc.py（'研究设计文档'→'研究设计文档【已漂移】'）但不重新生成 DOCX -> pytest tests/test_docs_consistency.py -q -> exit 0（2 passed）",
+        "阳性对照 3a：向 docs/研究设计.md 追加一行 -> 失败（tests/test_docs_consistency.py:36 AssertionError）",
+        "tools/build_research_doc.py:545-550 main() 只 build()+save()，无 --check；CI 不调用该脚本（grep ci.yml 无命中）",
+        "实测当前 DOCX 内容确与生成器一致：原文件 vs 副本内重新生成，16 个 XML part 全部相同、document.xml 可见文本均为 7655 字符；sha256 不同仅因 zip 内时间戳（说明'逐字节比较'不可行，应比较 XML 内容）"
+      ],
+      "impact": "改了生成器而忘记重新生成 DOCX 时，md 测试仍绿（md 是从旧 docx 派生的），文档与生成器会永久分叉且不可见；反过来，md 与 docx 一致并不能保证 docx 与生成器一致",
+      "minimal_fix": "给 build_research_doc.py 加 --check（生成到内存/临时文件后比较 word/document.xml 的规范化内容），并在 tests/test_docs_consistency.py 中调用",
+      "confidence": "high"
+    },
+    {
+      "id": "D12",
+      "severity": "P3",
+      "title": "CI lint 范围漏掉 examples/：用钉住的 ruff 0.17.0 实测 examples 有 11 处违规",
+      "evidence": [
+        ".github/workflows/ci.yml:30 run: ruff check family_abm tests tools experiments",
+        "实测（%TEMP%\\venv_ruff 安装 ruff==0.17.0，与 pyproject:67 及 CI 的钉版本一致）：ruff check family_abm tests tools experiments -> exit 0 'All checks passed!'；ruff check examples -> exit 1 'Found 11 errors'；ruff check . -> 同样 11 errors",
+        "统计：F401 unused-import ×5、I001 unsorted-imports ×3、F541 f-string-missing-placeholders ×2、F841 unused-variable ×1（10 项可 --fix）；实例：examples/fitting_viz_demo.py:8 F401 family_abm.FeatureExtractor、:186 F841 sub、examples/ml_ready.py:5 F401 numpy",
+        "README.md:354 的开发者命令同样遗漏 examples"
+      ],
+      "impact": "CI 绿灯但用户最常复制的示例代码不合规；lint 覆盖声明与 pyproject 的 [tool.ruff.lint] 配置不匹配",
+      "minimal_fix": "CI 与 README 改为 ruff check .（或显式补 examples），先跑 ruff check --fix examples",
+      "confidence": "high"
+    },
+    {
+      "id": "D13",
+      "severity": "P3",
+      "title": ".gitignore 未覆盖生成物目录 examples/output/：10 个由示例生成的 PNG 被跟踪",
+      "evidence": [
+        "git ls-files examples/output -> 10 个 PNG（01_timeseries.png … 10_forecast.png）",
+        "git check-ignore -v examples/output/01_timeseries.png -> 无输出（未被忽略）；.gitignore 全文无 examples/output 条目（仅 build/ dist/ *.egg-info/ 缓存等）",
+        "生成者 examples/fitting_viz_demo.py:16-17 OUTPUT_DIR.mkdir + 各 demo 直接 savefig；README 未引用这些图（只引用 experiments/results/*.png）",
+        "本机重跑示例后 git status 未显示这 10 个文件变化（PNG 在本机确定性），但内容随 matplotlib/字体版本而变"
+      ],
+      "impact": "每次本地跑示例都可能产生平台相关的二进制 diff，污染提交与审查；仓库体积与噪声增加",
+      "minimal_fix": "二选一：把 examples/output/ 加入 .gitignore（代表性截图放 docs/screenshots/）；或明确它们是'期望纳入版本控制的快照'并在测试中断言其确定性",
+      "confidence": "medium",
+      "provenance_note": "是否算'误跟踪'取决于项目意图；仅指出该目录既非忽略也未被任何守卫约束"
+    },
+    {
+      "id": "D14",
+      "severity": "P3",
+      "title": "MANIFEST.in 注释与 sdist 实际内容不符（声称默认含 tests/，实测不含）",
+      "evidence": [
+        "MANIFEST.in:3-4 'setuptools 默认已包含 family_abm/、tests/（作为包内测试）、README.md、LICENSE、pyproject.toml、setup.py'",
+        "实测 sdist 顶层条目 = CHANGELOG.md, CITATION.cff, CONTRIBUTING.md, LICENSE, MANIFEST.in, PKG-INFO, README.md, family_abm, family_abm.egg-info, pyproject.toml, setup.cfg, setup.py —— 不含 tests/（也不含 docs/、examples/、baseline/）"
+      ],
+      "impact": "维护者按注释推断包含关系会出错（例如以为测试随 sdist 分发、或以为 examples 可用）；注释是唯一'文档化'的 sdist 策略",
+      "minimal_fix": "修正注释为实际行为；若要随 sdist 分发测试，显式 recursive-include tests *.py",
+      "confidence": "high"
+    },
+    {
+      "id": "D15",
+      "severity": "P3",
+      "title": ".gitattributes 未把 .docx 显式声明为 binary（依赖 text=auto 的内容探测）",
+      "evidence": [
+        "git check-attr -a -- 'docs/研究设计文档.docx' -> diff: astextplain / text: auto / eol: lf",
+        ".gitattributes:5-12 只列了 *.png *.jpg *.jpeg *.gif *.ico *.pdf *.woff *.woff2",
+        "当前未损坏：git status 未报该 docx 修改，docs/研究设计文档.docx sha256[0:16]=95eef5f1c173d837 与 HEAD 内容一致"
+      ],
+      "impact": "docx 是 zip 容器，一旦被当作文本做 EOL 转换就会损坏；现在靠 git 的内容探测（NUL 检测）兜住，属隐性依赖",
+      "minimal_fix": "加 *.docx binary（以及将来 *.xlsx binary）",
+      "confidence": "medium"
+    },
+    {
+      "id": "D16",
+      "severity": "P3",
+      "title": "tools/*.py 的 --check 模式在 CI 中从未执行（其中 sync_requirements --check 比 pytest 守卫更严格）",
+      "evidence": [
+        "Select-String ci.yml 'sync_requirements|export_research_md|build_research_doc' -> 全部无命中；CI 只跑 ruff 与 pytest",
+        "本地实测：python tools/sync_requirements.py --check -> exit 0 '[OK] …已同步'；python tools/export_research_md.py --check -> exit 0 '[OK] …已同步'",
+        "对照 D5：删除 networkx 行时 pytest 绿而 sync_requirements --check 红——工具更严格却不在 CI 中"
+      ],
+      "impact": "已实现的校验入口形同死代码；镜像/派生文档漂移只能靠较弱的 pytest 断言兜底",
+      "minimal_fix": "CI 增加一步：python tools/sync_requirements.py --check && python tools/export_research_md.py --check（可选 build_research_doc --check，见 D11）",
+      "confidence": "high"
+    },
+    {
+      "id": "D17",
+      "severity": "P3",
+      "title": "baseline 重固化在 Windows 写入 CRLF，'逐字节相同'只在同一 OS 内成立（git 侧已被 .gitattributes 归一化）",
+      "evidence": [
+        "工作区/提交的 baseline/default_seed42.json：3444 B、CRLF=0；本机 python tools/baseline.py --out %TEMP%\\b1.json -> 3591 B、CRLF=147（tools/baseline.py:127 用 Path.write_text 文本模式）",
+        "python tools/baseline.py --check baseline/default_seed42.json -> exit 0（按解析后的 JSON 比较，不受行尾影响）",
+        "git hash-object --path=baseline/default_seed42.json <CRLF 文件> 与工作区 LF 文件同哈希 -> 因为 .gitattributes '*' 的 text=auto eol=lf clean filter 生效，不会产生 git 噪声",
+        "tests/test_packaging.py:358-365 断言'两次运行逐字节相同'，只在同一平台内成立"
+      ],
+      "impact": "实际影响很小（git 已归一化）；但若下游做跨平台字节哈希比对/缓存，会误判为行为变化",
+      "minimal_fix": "tools/baseline.py 写文件时显式 newline='\\n'；测试注释说明'同平台逐字节'",
+      "confidence": "high"
+    },
+    {
+      "id": "D18",
+      "severity": "P3",
+      "title": "CI 矩阵/权限/覆盖面的其它缺口（缺 3.11 与 3.14、Windows 不跑 packaging、无顶层最小权限、无 pip check）",
+      "evidence": [
+        ".github/workflows/ci.yml:38 matrix.python-version = [\"3.10\",\"3.12\",\"3.13\"] -> 无 3.11；本机开发环境 Python 3.14.3 且 pyproject.toml:13 requires-python = \">=3.10\"（无上界）-> 3.11/3.14 从未在 CI 验证；README.md:364 与 badge(:4) 也只声称 3.10–3.13",
+        ":51-73 test-windows 仅 3.12 且 -m \"not packaging\" -> Windows 上 wheel 安装/web 资源定位路径完全未覆盖（仅 Linux package job）",
+        "全文 permissions 仅出现在 release job(:109-110 contents: write)；无顶层 permissions 块 -> 其余 job 使用仓库默认 token 权限",
+        "grep ci.yml: 无 'ruff format'、'pip check'、'coverage'、'upload-artifact'"
+      ],
+      "impact": "新版本（3.11/3.14）与 Windows 打包路径的回归可能不带告警进入发布；默认 token 权限宽于最小必要",
+      "minimal_fix": "matrix 补 3.11/3.14（3.14 可用 allow-prerelease 策略）；顶层 permissions: contents: read；可选增加 python -m pip check 与覆盖率",
+      "confidence": "high"
+    }
+  ],
+  "drift_experiments": [
+    {
+      "id": "1a",
+      "chain": "pyproject.toml -> requirements.txt (runtime 版本约束)",
+      "mutation": "requirements.txt: numpy>=1.21.0 -> numpy>=9.9.9",
+      "guard": "pytest tests/test_packaging.py::test_requirements_matches_pyproject",
+      "expected": "fail",
+      "observed": "exit 1 (AssertionError at tests/test_packaging.py:149)",
+      "verdict": "caught",
+      "restored_sha_match": true
+    },
+    {
+      "id": "1b",
+      "chain": "pyproject.toml -> requirements.txt (extras 完整性)",
+      "mutation": "requirements.txt: 删除 networkx>=2.6 行",
+      "guard": "pytest tests/test_packaging.py::test_requirements_matches_pyproject",
+      "expected": "fail",
+      "observed": "exit 0 (绿) —— 盲区",
+      "verdict": "blind_spot",
+      "cross_check": "python tools/sync_requirements.py --check -> exit 1 [FAIL] requirements.txt 与 pyproject.toml 不一致",
+      "restored_sha_match": true
+    },
+    {
+      "id": "1c",
+      "chain": "pyproject.toml -> requirements.txt (反向：镜像多出未声明包)",
+      "mutation": "pyproject.toml: 删除 pydantic>=2.0.0",
+      "guard": "pytest test_pyproject_declares_all_runtime_dependencies + test_requirements_matches_pyproject",
+      "expected": "fail",
+      "observed": "exit 1 (tests/test_packaging.py:145 '含 pyproject 未声明的依赖：pydantic')",
+      "verdict": "caught",
+      "restored_sha_match": true
+    },
+    {
+      "id": "2a",
+      "chain": "DEFAULT_PARAMS -> README (总数)",
+      "mutation": "README.md: '27 个动力学参数' -> '26 个动力学参数'",
+      "guard": "pytest tests/test_readme_consistency.py::test_readme_parameter_count_matches_code",
+      "expected": "fail",
+      "observed": "exit 1 (assert 26 == 27)",
+      "verdict": "caught",
+      "restored_sha_match": true
+    },
+    {
+      "id": "2b",
+      "chain": "DEFAULT_PARAMS -> README (分组明细)",
+      "mutation": "README.md:211 'Education 1 ／ Income 4 ／ Health 3 ／ Stress 4+2 ／' -> 'Education 9 ／ Income 9 ／ Health 9 ／ Stress 9+9 ／'",
+      "guard": "pytest tests/test_readme_consistency.py",
+      "expected": "fail",
+      "observed": "exit 0（8 passed）—— 盲区",
+      "verdict": "blind_spot",
+      "restored_sha_match": true
+    },
+    {
+      "id": "3a",
+      "chain": "DOCX -> docs/研究设计.md",
+      "mutation": "docs/研究设计.md 追加一行 'DRIFT'",
+      "guard": "pytest tests/test_docs_consistency.py",
+      "expected": "fail",
+      "observed": "exit 1 (tests/test_docs_consistency.py:36)",
+      "verdict": "caught",
+      "restored_sha_match": true
+    },
+    {
+      "id": "3b",
+      "chain": "tools/build_research_doc.py -> DOCX（链顶）",
+      "mutation": "tools/build_research_doc.py 文本改名，不重新生成 DOCX",
+      "guard": "pytest tests/test_docs_consistency.py",
+      "expected": "fail",
+      "observed": "exit 0（2 passed）—— 盲区",
+      "verdict": "blind_spot",
+      "restored_sha_match": true
+    },
+    {
+      "id": "4",
+      "chain": "代码行为 -> baseline/default_seed42.json",
+      "mutation": "把 baseline 中 FamilyMember.state_happiness.mean 改为 0.123456",
+      "guard": "pytest tests/test_packaging.py::test_committed_baseline_exists_and_matches_current_behavior",
+      "expected": "fail",
+      "observed": "exit 1（--check 返回 1，打印 baseline/current 差异）",
+      "verdict": "caught",
+      "restored_sha_match": true
+    },
+    {
+      "id": "G1",
+      "chain": "CHANGELOG.md -> 发布说明/实现",
+      "mutation": "注入 '## [0.1.1]' 段并写入与实现相反的缺失值说法",
+      "guard": "pytest tests/test_readme_consistency.py tests/test_docs_consistency.py tests/test_packaging.py",
+      "expected": "fail",
+      "observed": "exit 0（26 passed）—— 盲区；且 extract_release_notes 0.1.1 照抄错误说法并硬编码 0.1.0 wheel 名",
+      "verdict": "blind_spot",
+      "restored_sha_match": true
+    },
+    {
+      "id": "P-extra",
+      "chain": "（正向验证）no-mutation checks",
+      "mutation": "无",
+      "guard": "tools/sync_requirements.py --check / tools/export_research_md.py --check / extract_release_notes 0.1.0 vs docs/release-notes-0.1.0.md",
+      "expected": "consistent",
+      "observed": "exit 0 / exit 0 / 派生文本与已跟踪文件逐字符相同（4875 chars）",
+      "verdict": "in_sync",
+      "restored_sha_match": null
+    }
+  ],
+  "test_discriminative_power": {
+    "suite_baseline": {
+      "command": "python -X utf8 -m pytest tests/ -q -rs（在 %TEMP%\\niche_infra_copy）",
+      "result": "136 passed in 62.61s, 0 skipped, exit 0",
+      "env": "Python 3.14.3, node v24.14.0, setuptools 82.0.1, ruff(全局) 0.15.20"
+    },
+    "target_files_baseline": {
+      "command": "python -X utf8 -m pytest tests/test_packaging.py tests/test_docs_consistency.py tests/test_readme_consistency.py -q",
+      "result": "26 passed, exit 0, 0 skipped"
+    },
+    "patterns_checked": {
+      "assert_x_is_not_none": "3 处（见 T6），均有更强的相邻断言",
+      "assert_true_or_tautology": "无（grep 'assert True|or True|len(...) >= 0' 无命中）",
+      "grep_only_semantics": "1 处显著：test_data_contract.py:154（正则源码扫描）；另有 test_readme_consistency 的字符串包含型断言（README 承载事实，属设计选择）",
+      "try_except_swallowing_failures": "无：tests/ 中 except 仅出现在 tomllib 导入守卫（test_readme_consistency.py:18-24、test_packaging.py:25-31），不吞断言",
+      "over_broad_skip": "2 类：tests/test_packaging.py:226/:238（构建/安装环境，实测可整体变 SKIPPED）；tests/test_docs_consistency.py:26（importorskip python-docx）",
+      "skipif_marks": "未使用 pytest.mark.skipif；node 缺失时 skip（test_simulation_and_fitting.py:859-861），CI 有 node 所以会真跑",
+      "mutation_or_negative_controls_present": "有且质量高：test_packaging.py:301-333（httpx 缺失必须失败）、:373-387（篡改 baseline 必须失败）、test_simulation_and_fitting.py:868-885（converged 双向突变测试）"
+    }
+  },
+  "suspicious_tests": [
+    {
+      "id": "T1",
+      "test": "tests/test_packaging.py::test_requirements_matches_pyproject",
+      "location": "tests/test_packaging.py:112-151",
+      "discriminative_power": "中（runtime 方向有效；extras 方向无效）",
+      "why_it_can_pass_forever": "missing 只比较 runtime 集合（:141），undeclared 只查镜像里多出的包（:144）；requirements.txt 少写 [viz]/[dev] 依赖时两个集合都不变，断言全部通过",
+      "evidence": "实测删除 networkx>=2.6 -> pytest exit 0 而同仓 sync_requirements.py --check exit 1",
+      "suggested_fix": "把 extras 也纳入双向一致断言，或 CI 直接跑 --check"
+    },
+    {
+      "id": "T2",
+      "test": "tests/test_readme_consistency.py::test_readme_parameter_count_matches_code",
+      "location": "tests/test_readme_consistency.py:52-64",
+      "discriminative_power": "部分（只守住总数）",
+      "why_it_can_pass_forever": "re.search 只取第一个 '(\\d+)\\s*个动力学参数'（README:26），README:211 的分组明细不在任何断言里",
+      "evidence": "实测把分组改成 9/9/9/9+9 -> 8 passed",
+      "suggested_fix": "断言分组计数之和与代码真源一致"
+    },
+    {
+      "id": "T3",
+      "test": "tests/test_docs_consistency.py::test_derived_markdown_matches_docx",
+      "location": "tests/test_docs_consistency.py:24-38",
+      "discriminative_power": "中（内容级比较有效，但可被环境跳过、且只守链的下半段）",
+      "why_it_can_pass_forever": "pytest.importorskip('docx')（:26）与 DOCX.exists() 守卫（:27）让未装 dev extra 的环境静默跳过；同时它验证 docx→md，不验证 generator→docx（实测 3b 绿）",
+      "evidence": "本机装了 python-docx 1.2.0，测试真跑（3 个目标文件 26 passed 无 skip）；副本内改 generator 后仍 2 passed",
+      "suggested_fix": "增加 generator→docx 的 --check 断言；importorskip 改为 CI 下必须存在"
+    },
+    {
+      "id": "T4",
+      "test": "tests/test_packaging.py fixture built_dist 及其 13 个下游测试",
+      "location": "tests/test_packaging.py:211-239（skip 于 :226、:238）",
+      "discriminative_power": "高（能真正构建/安装/HTTP 冒烟）但可被环境整体关闭",
+      "why_it_can_pass_forever": "缺 build 或 pip install --target 失败即 pytest.skip，整个 module-scoped fixture 的消费者全部不执行，pytest 仍 exit 0",
+      "evidence": "实测两个 sitecustomize 实验（屏蔽 build / 屏蔽 pip）均 exit 0 + SKIPPED",
+      "suggested_fix": "CI 环境强制 fail 而非 skip；或 CI 断言 packaging 用例确实被执行"
+    },
+    {
+      "id": "T5",
+      "test": "tests/test_data_contract.py::test_frontend_does_not_coerce_null_to_zero",
+      "location": "tests/test_data_contract.py:154-164",
+      "discriminative_power": "低（源码正则扫描，非执行）",
+      "why_it_can_pass_forever": "正则 r'\\[[A-Za-z_$][\\w$]*\\]\\s*\\|\\|\\s*0\\b' 只匹配 'x[...] || 0' 一种写法；'row[c] ?? 0'、'row[c] ? row[c] : 0'、'Number(row[c] || 0)' 等语义等价写法均不命中",
+      "evidence": "同文件注释自认 'JS 无法在 pytest 里直接执行'，但仓内已有 tools/check_dashboard_behavior.js + tests/test_simulation_and_fitting.py:847 真正在 Node 里加载 dashboard.js（node v24.14.0 实测可跑）",
+      "suggested_fix": "把该断言迁进 Node harness（对 null→0 的行为做断言），pytest 里保留一行引用"
+    },
+    {
+      "id": "T6",
+      "test": "assert ... is not None 三处",
+      "location": "tests/test_simulation_and_fitting.py:208、:278；tests/test_data_contract.py:177",
+      "discriminative_power": "可接受（不是恒真，但弱）",
+      "why_it_can_pass_forever": "单看该断言几乎不设限；其判别力来自紧邻的更强断言（resolve_state_columns 相等、bounds 相等、r_squared < 0.0）",
+      "evidence": "逐处阅读上下文：:207 断言 resolve_state_columns 精确相等；:277 断言 bounds 列表相等；:178 断言 r_squared < 0.0",
+      "suggested_fix": "改为具体数值/区间断言（如 0 < r_squared < 1），或在注释中说明它只是'未失败'标记"
+    },
+    {
+      "id": "T7",
+      "test": "tests/test_examples_smoke.py::test_example_module_imports",
+      "location": "tests/test_examples_smoke.py:20-22",
+      "discriminative_power": "弱（只查 hasattr(main)）但有效（import 本身即回归检查）",
+      "why_it_can_pass_forever": "断言本身只验证 main 存在；真正价值是 import 时执行模块级注解/语句（能抓到 Python<3.14 的 pd.DataFrame 注解 NameError）",
+      "evidence": "工作区 examples/fitting_viz_demo.py:5 已补 import pandas as pd（第 1 轮 P1 修复）；该测试文件本身未被 git 跟踪（见 D1）",
+      "suggested_fix": "保持 import 测试，同时确保行为级用例（同文件 :35-44）也被执行；把文件纳入版本控制"
+    },
+    {
+      "id": "T8",
+      "test": "tests/test_packaging.py::test_build_does_not_pollute_repository",
+      "location": "tests/test_packaging.py:242-260",
+      "discriminative_power": "中（只覆盖首次污染）",
+      "why_it_can_pass_forever": "preexisting 集合（:219）把构建前已存在的 build/ dist/ family_abm.egg-info 排除在断言外；本仓库根目录当前就有 build/（git status --ignored 列出 '!! build/'），因此向既有 build/ 写入不会被发现",
+      "evidence": "git status --ignored --porcelain -> '!! build/'、'!! family_abm.egg-info/'、'!! .pytest_cache/' 等 16 条",
+      "suggested_fix": "断言仓库根这些目录的 mtime/内容哈希未变，或构建前重命名它们"
+    }
+  ],
+  "ci_review": {
+    "triggers": "push(branches=[main], tags=['v*']) + pull_request(main) + workflow_dispatch —— 语法正确；release 用 if: startsWith(github.ref,'refs/tags/v') 正确区分 tag 与 PR",
+    "jobs": [
+      "lint(ubuntu, py3.12, ruff==0.17.0)",
+      "test(ubuntu matrix 3.10/3.12/3.13)",
+      "test-windows(3.12, -m 'not packaging')",
+      "package(ubuntu: build wheel → pytest -m packaging → clean venv install + verify_install --import-only)",
+      "release(tag: build wheel+sdist → 文件名版本子串校验 → gh release create/upload)"
+    ],
+    "issues": [
+      "D7 release 无 needs（测试失败也会发布）",
+      "D6 无 sdist 构建/内容/安装验证",
+      "D9 packaging 用例可被环境整体跳过（本地/受限环境假绿）",
+      "D12 lint 范围漏 examples/（实测 11 errors）",
+      "D18 矩阵缺 3.11/3.14；Windows 不跑 packaging；无顶层最小权限",
+      "版本校验（ci.yml:132-137）只做文件名子串包含，不比对 pyproject/包名/产物数量；dist/ 为空时靠 bash 未展开的通配符恰好失败，属偶然正确"
+    ],
+    "correct_details": [
+      "ruff 钉 0.17.0 且 [tool.ruff.lint] select 显式声明（版本漂移问题已修）",
+      "verify_install.py 在 httpx 缺失时失败而非跳过，并有'仓库副本冒充已安装副本'的诚实性检查（tools/verify_install.py:89-98,124-128）",
+      "package job 从 /tmp 运行 --import-only（避免 sys.path[0] 遮蔽），与 tools/verify_install.py 的设计一致",
+      "Windows job 单独成 job 以避免空的 -m 参数（注释说明了原因）"
+    ]
+  },
+  "version_matrix": [
+    {
+      "source": "pyproject.toml:7",
+      "value": "0.1.0"
+    },
+    {
+      "source": "family_abm/__init__.py:6",
+      "value": "0.1.0"
+    },
+    {
+      "source": "README.md:383 (bibtex note)",
+      "value": "0.1.0"
+    },
+    {
+      "source": "README.md:397 (版本节)",
+      "value": "0.1.0"
+    },
+    {
+      "source": "CITATION.cff:18",
+      "value": "0.1.0"
+    },
+    {
+      "source": "CHANGELOG.md:9",
+      "value": "0.1.0"
+    },
+    {
+      "source": "docs/研究设计.md:7",
+      "value": "v0.1.0（对应软件版本）"
+    },
+    {
+      "source": "docs/release-notes-0.1.0.md",
+      "value": "0.1.0"
+    },
+    {
+      "source": "git tag",
+      "value": "v0.1.0 -> c65752e（HEAD fe56135 之后 1 提交）"
+    },
+    {
+      "source": "构建产物名",
+      "value": "family_abm-0.1.0-py3-none-any.whl / family_abm-0.1.0.tar.gz（与 tag 一致）"
+    },
+    {
+      "source": "family_abm/web/app.py:26",
+      "value": "0.2.0  ← 不一致（/openapi.json info.version=0.2.0）"
+    },
+    {
+      "source": "CI 版本校验",
+      "value": "只校验产物名含 tag 版本子串，不比对 pyproject"
+    }
+  ],
+  "artifact_inventory": {
+    "build_command": "python -m build --outdir %TEMP%\\dist_probe <staged copy of repo>（在仓库外的 staged 源上构建，仓库零污染）",
+    "wheel": {
+      "name": "family_abm-0.1.0-py3-none-any.whl",
+      "files": 35,
+      "web_assets": [
+        "family_abm/web/templates/index.html",
+        "family_abm/web/static/css/style.css",
+        "family_abm/web/static/js/dashboard.js"
+      ],
+      "unwanted": "无（无 __pycache__/.pyc、无 tests/ tools/ audits/）",
+      "metadata_license": [
+        "License-Expression: MIT",
+        "License-File: LICENSE"
+      ]
+    },
+    "sdist": {
+      "name": "family_abm-0.1.0.tar.gz",
+      "members": 59,
+      "top_level": [
+        "CHANGELOG.md",
+        "CITATION.cff",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "MANIFEST.in",
+        "PKG-INFO",
+        "README.md",
+        "family_abm",
+        "family_abm.egg-info",
+        "pyproject.toml",
+        "setup.cfg",
+        "setup.py"
+      ],
+      "present_as_declared": [
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "CITATION.cff",
+        "LICENSE",
+        "README.md"
+      ],
+      "absent": [
+        "tests/",
+        "tools/",
+        "docs/",
+        "audits/",
+        "experiments/",
+        "baseline/",
+        "examples/"
+      ],
+      "unwanted": "无 .pyc/__pycache__；setup.cfg 与 family_abm.egg-info 是 setuptools 的常规生成物"
+    },
+    "repo_ignored_but_present": [
+      "build/",
+      "family_abm.egg-info/",
+      ".pytest_cache/",
+      ".ruff_cache/",
+      "16 个 __pycache__ 目录"
+    ],
+    "tracked_generated": [
+      "examples/output/*.png ×10（D13）",
+      "experiments/results/*.png+json（README 引用，属研究成果）",
+      "baseline/default_seed42.json（锚点，刻意跟踪）",
+      "requirements.txt 与 docs/研究设计.md（派生但有测试守卫）"
+    ]
+  },
+  "round1_regressions": {
+    "note": "第 1 轮我是 ml/viz/examples 审查员；此处记录与地基相关的变化（工作区未提交）",
+    "fixed_in_working_tree": [
+      "ml/features.py 不再 fillna(0)（完整案例过滤 + X/y 同掩码）—— 新测试 tests/test_features_nan.py（未跟踪）已钉住",
+      "examples/fitting_viz_demo.py 补 import pandas as pd —— 新测试 tests/test_examples_smoke.py（未跟踪）通过 import 触发回归",
+      "pyproject 依赖已补齐 scipy/matplotlib/pydantic（第 1 轮 setup.py 只声明 numpy/pandas 的 P1 已修，test_pyproject_declares_all_runtime_dependencies 通过）",
+      "时间轴 t=0 基线已修：tools/baseline.py --out 输出 time=[0..120]（CHANGELOG.md:73 记录）"
+    ],
+    "still_open_in_scope": [
+      "viz/plots.py 未在工作区修改列表 → 第 1 轮的 Agg 强制后端、plot_timeseries 未按 agent 分组、figure 不关闭等发现保持原状（本轮由 stream C 覆盖）"
+    ]
+  },
+  "verified_ok": [
+    "单一真源正向验证：tools/sync_requirements.py --check exit 0；tools/export_research_md.py --check exit 0；extract_release_notes.py 0.1.0 的输出与已跟踪 docs/release-notes-0.1.0.md 逐字符相同（4875 chars）",
+    "baseline 链有效：--check exit 0；同一 seed 两次 --out 产物逐字节相同（sha256 353D0711...）；篡改任一数值后 --check exit 1（漂移实验 4）",
+    "全量测试（Python 3.14.3，仓库副本）：python -m pytest tests/ -q -rs -> 136 passed in 62.61s，0 skipped，exit 0（含 packaging 构建/安装/HTTP 冒烟与 Node harness，node v24.14.0）",
+    "目标三文件：tests/test_packaging.py tests/test_docs_consistency.py tests/test_readme_consistency.py -> 26 passed，exit 0，无 skip",
+    "wheel 洁净度与资源：35 个文件，web 资源齐全，无测试/工具/缓存；METADATA 含 PEP 639 字段",
+    "sdist 顶层文档：CHANGELOG/CONTRIBUTING/CITATION/LICENSE/README 均在内（MANIFEST.in 生效），无 .pyc",
+    "DOCX 内容与生成器一致：16/16 XML part 相同、可见文本 7655 字符相同（sha 差异仅来自 zip 时间戳）",
+    ".gitattributes 归一化有效：Windows 下 baseline 脚本写 CRLF，但 git hash-object（应用 clean filter 后）与 LF 工作区文件同哈希 → 无 git 噪声",
+    ".gitignore 覆盖：仓库内 16 个被忽略目录全部命中规则（build/、*.egg-info/、__pycache__/、.pytest_cache/、.ruff_cache/）；未发现未忽略的散落生成物（examples/output 例外，见 D13）",
+    "无 try/except 吞断言的测试；无 pytest.mark.skipif；测试文件普遍带'回归：曾经怎样坏'的说明与反向（突变）用例"
+  ],
+  "uncertainties": [
+    "D13 的定性取决于项目意图：examples/output/*.png 可能被刻意作为'示例产物快照'纳入版本控制；我据 README 未引用它们、且 .gitignore 未排除，判为 P3 而非 P1/P2",
+    "D3 的实际暴露概率取决于构建环境的 setuptools 解析结果；默认 pip 隔离构建会取最新版（本机 82.0.1，构建成功），只有在锁定/离线旧版时才必然失败",
+    "D12 的 ruff 结论使用与 CI 相同的 0.17.0 复现（本机全局 ruff 是 0.15.20，两者对 examples 的判定一致均为 11 errors，但我在报告中以 0.17.0 为准）",
+    "未在当前环境验证 GitHub Actions 的真实运行（无 CI 运行记录/网络访问 gh），CI 结论基于 YAML 静态分析与等价本地命令（ruff/pytest/build/venv）复现",
+    "v0.1.0 Release 页面是否已上传产物、产物是否来自 tag 提交，本机无法核验（无 gh 凭据）；D1 的结论限定为'仓库状态使产物与工作区内容不可追溯'"
+  ],
+  "severity_distribution": {
+    "P1": 1,
+    "P2": 10,
+    "P3": 7
+  },
+  "provenance_distribution": {
+    "committed": 16,
+    "committed_with_scope_note": 2
+  }
+}

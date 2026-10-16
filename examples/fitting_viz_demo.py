@@ -2,6 +2,7 @@
 Comprehensive demo: run ABM, fit Lanchester-type ODE models, visualize results.
 """
 import numpy as np
+import pandas as pd
 from family_abm import (
     Environment, Simulation, Scheduler,
     FamilyMember, Household, StateRecorder, FeatureExtractor,
@@ -155,9 +156,12 @@ def demo_fitting(df: pd.DataFrame):
     plt_close(fig)
 
     # —— Model B: social_influence (opinion dynamics) ——
-    # Map ODE states O1/O2 to actual ABM columns
+    # Map ODE states O1/O2 to actual ABM columns.
+    # 该模型有 4 个参数（gamma, delta, target1, target2）；固定吸引子
+    # target1/target2，只拟合耦合强度 gamma/delta。
     fitter_inf = make_fitter("influence",
-                             state_mapping={"O1": "state_happiness", "O2": "state_stress"})
+                             state_mapping={"O1": "state_happiness", "O2": "state_stress"},
+                             target1=1.0, target2=0.0)
     fitter_inf.fit_from_dataframe(
         df, agent_id=child_id,
         p0=[0.3, 0.1],

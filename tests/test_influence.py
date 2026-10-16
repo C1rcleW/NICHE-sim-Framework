@@ -24,6 +24,7 @@ from family_abm.family.influence import (
     source_weight,
     susceptibility,
 )
+from family_abm.family.relationships import Relationship
 
 STAGE_AGES = [0.0, 2.0, 5.0, 9.0, 15.0, 25.0, 50.0]
 MEMBERS = [("Father", 40, "male", "parent"), ("Mother", 38, "female", "parent"), ("Child", 6, "male", "child")]
@@ -355,3 +356,106 @@ def test_relationship_dynamics_do_not_depend_on_iteration_order() -> None:
     assert (rel_a.affection, rel_a.trust, rel_a.conflict) == pytest.approx(
         (rel_b.affection, rel_b.trust, rel_b.conflict)
     ), "关系状态受迭代顺序影响，跨运行不可复现"
+
+
+def test_unnamed_households_have_independent_relationship_streams() -> None:
+    """同名家庭（含默认名）的关系随机流必须彼此独立。
+
+    回归：关系种子的身份键只用"家庭名#序号"，两个未命名家庭的标签完全相同
+    → 关系初值与整条随机游走逐点一致。家庭层面的方差/聚类分析会因这种
+    跨家庭相关而被系统性污染，且没有任何报错。
+    """
+    def build():
+        env = Environment()
+        sim = Simulation(env, scheduler=Scheduler("sequential"), seed=42)
+        households = []
+        for i in range(2):
+            hh = Household(environment=env)          # 默认名 "Household"，两户同名
+            env.add_agent(hh)
+            hh.add_member(FamilyMember(name="A", age=40, agent_id=f"a{i}", environment=env))
+            hh.add_member(FamilyMember(name="B", age=10, agent_id=f"b{i}", environment=env))
+            households.append(hh)
+        sim.run(10)
+        return households
+
+    hh1, hh2 = build()
+    rel1 = hh1.get_relationship("a0", "b0")
+    rel2 = hh2.get_relationship("a1", "b1")
+    state1 = (rel1.affection, rel1.trust, rel1.conflict)
+    state2 = (rel2.affection, rel2.trust, rel2.conflict)
+    assert state1 != state2, (
+        f"两个同名家庭的关系状态完全相同（{state1}）——随机流跨家庭相关"
+    )
+
+
+def test_same_build_gives_identical_relationship_states() -> None:
+    """加入 scope 后，同 seed 跨运行的关系状态仍须逐点一致（确定性护栏）。"""
+    def build():
+        env = Environment()
+        sim = Simulation(env, scheduler=Scheduler("sequential"), seed=7)
+        hh = Household(environment=env)
+        env.add_agent(hh)
+        hh.add_member(FamilyMember(name="A", age=40, agent_id="a", environment=env))
+        hh.add_member(FamilyMember(name="B", age=10, agent_id="b", environment=env))
+        sim.run(10)
+        rel = hh.get_relationship("a", "b")
+        return (rel.affection, rel.trust, rel.conflict)
+
+    assert build() == build(), "同一构建方式的两次运行关系状态不一致"
+
+
+def test_relation_type_participates_in_relationship_seed() -> None:
+    """关系类型必须参与种子派生——docstring 一直这么承诺，实现里却没有。
+
+    同一批成员之间的不同类型关系（如 member 与冲突关系）应拿到独立随机流，
+    而不是共享同一条流的前缀。
+    """
+    rel_member = Relationship("x", "y", relation_type="member", seed=7, identity=("A#0", "A#1"))
+    rel_other = Relationship("x", "y", relation_type="generic", seed=7, identity=("A#0", "A#1"))
+    assert (rel_member.affection, rel_member.trust) != (rel_other.affection, rel_other.trust), (
+        "关系类型未参与种子派生，不同类型的关系共享随机流"
+    )
+
+
+# ── 参数读取的零值陷阱 ────────────────────────────────────────────────────
+
+
+def test_susceptibility_scale_zero_is_honored() -> None:
+    """``susceptibility_scale=0`` 必须真的关掉易感性。
+
+    回归：参数读取曾写作 ``float(params.get(k, 1.0) or 1.0)``——``or`` 对 0 的
+    真值判断是错的，用户把敏感性分析参数设为 0（"完全关闭易感性"的自然写法）
+    会被静默改写成 1.0，消融实验拿到的是被篡改的条件，且无任何报错。
+    """
+    _env, sim, _hh, members = build_household(params={"susceptibility_scale": 0.0})
+    sim.run(3)
+    child = members[-1]
+    assert child.get_state_value("susceptibility") == 0.0, (
+        f"susceptibility_scale=0 被忽略，实际易感性={child.get_state_value('susceptibility')}"
+    )
+    assert child.get_state_value("influence_received") == 0.0, (
+        "易感性为 0 时影响量必须为 0（影响量 ∝ 易感性）"
+    )
+
+
+def test_influence_strength_zero_disables_influence() -> None:
+    """``influence_strength=0`` 关闭影响（零值必须原样生效，而非被兜底改写）。"""
+    _env, sim, _hh, members = build_household(params={"influence_strength": 0.0})
+    sim.run(3)
+    assert members[-1].get_state_value("influence_received") == 0.0
+
+
+def test_zero_health_source_has_no_energy() -> None:
+    """来源健康为 0 时应被视为零能量，而不是被 ``or 1.0`` 当成满血。
+
+    健康在常规动力学下被钳位在下限之上，但 ``set_state_value("health", 0.0)``
+    是合法的 API 调用；此处的静默改写会让"能量约束"机制凭空失效。
+    """
+    _env, sim, _hh, members = build_household(params={"influence_strength": 1.0})
+    adults, child = members[:-1], members[-1]
+    for adult in adults:
+        adult.set_state_value("health", 0.0)
+    sim.run(1)
+    assert child.get_state_value("influence_received") == 0.0, (
+        "所有来源健康为 0 时，能量约束应使影响量归零"
+    )

@@ -1,0 +1,372 @@
+{
+  "stream": "A",
+  "task": "task-6 审计 A：核心引擎 + 拟合器",
+  "commit": "fe561357fc58eb48c05f47c698c6215a6dd33336",
+  "baseline": {
+    "note": "重要：审计基线是【带未提交改动的工作树】。HEAD=fe56135 是 v0.1.0 发布提交，但工作树在本次审计开始前就是脏的（33 项 git status 条目；未提交改动的时间戳为 2026-10-11 16:00:51，属 5 天前的批量写入，不是本次审计产生）。因此每条发现都标注了 file_baseline=clean(==HEAD) 或 dirty(vs HEAD)。",
+    "audited_at": "2026-10-16 12:30 +08:00",
+    "python": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026)",
+    "git_status_porcelain_count": 33,
+    "dirty_tracked_files": [
+      "README.md",
+      "baseline/default_seed42.json",
+      "examples/fitting_viz_demo.py",
+      "examples/ml_ready.py",
+      "experiments/mechanism_validation.py",
+      "experiments/sensitivity_analysis.py",
+      "family_abm/core/environment.py",
+      "family_abm/family/family_member.py",
+      "family_abm/family/household.py",
+      "family_abm/family/influence.py",
+      "family_abm/family/relationships.py",
+      "family_abm/ml/features.py",
+      "tests/test_influence.py",
+      "tests/test_simulation_and_fitting.py"
+    ],
+    "untracked_new_files": [
+      "tests/test_examples_smoke.py",
+      "tests/test_experiments.py",
+      "tests/test_features_nan.py",
+      "tests/test_registration.py"
+    ],
+    "in_scope_file_state_and_sha256": {
+      "family_abm/core/agent.py": {"state": "clean(==HEAD)", "sha256": "71A3B65CF5DB5A4E153B34C0747AC5CB9401519B6BC8E69FE064F7F8133401F5"},
+      "family_abm/core/environment.py": {"state": "dirty(vs HEAD)", "sha256": "59E9755927E890D4CDF62DF3263CFAA27E5DAA0051B4BFAE833C1138BE83A56E", "diff": "+46 lines: container_seq() 与 add_agent/remove_agent 的成员收养/联动移除"},
+      "family_abm/core/scheduler.py": {"state": "clean(==HEAD)", "sha256": "D69E3D87FDB0D40D4EF9DB466E070FEE45B3D573CBADB898BB387D09B337032B"},
+      "family_abm/core/simulation.py": {"state": "clean(==HEAD)", "sha256": "F2B2D82A19850BBA5452AB9D90D6D109167B4505B8D9F3CB375472B74D734115"},
+      "family_abm/core/__init__.py": {"state": "clean(==HEAD)", "sha256": "A7EC00C97CBA9178764D87F409224A9A3A79EBEA385408A106A705F094203FA5"},
+      "family_abm/fitting/fitter.py": {"state": "clean(==HEAD)", "sha256": "77E6E99C2AA39CB7978FDDECA171AC67685A924DA96C28429DB8D9797F28201F"},
+      "family_abm/fitting/lanchester.py": {"state": "clean(==HEAD)", "sha256": "2C259A1053E9402B35CE91E1F46890C1066295041550E1720C1F15B373D39CC2"},
+      "family_abm/fitting/__init__.py": {"state": "clean(==HEAD)", "sha256": "9B10F488171EB2742C8CC1323D899923FC12067D1B60881A8B321BF59613096C"},
+      "family_abm/__init__.py": {"state": "clean(==HEAD)", "sha256": "46B1A238FBBE439B0CAA79EEDBB2462D0606F5AF2C6BB1AE6D4629A26CA58ABB"},
+      "family_abm/family/family_member.py": {"state": "dirty(vs HEAD)", "sha256": "8E30048B1DE7641C22287B099300DCCE2510BE7C6F1FF83E341DD1CA9DF0F651"},
+      "family_abm/family/household.py": {"state": "dirty(vs HEAD)", "sha256": "3CEB8466467288DB07C6209071FB60A154E636F94D986899D0FD8AB9D43556FB"},
+      "family_abm/family/influence.py": {"state": "dirty(vs HEAD)", "sha256": "5157D2526C948F419E594CE0A7BF735256DC9478AEEA5D25C6A2BB27C79B4DEF"},
+      "family_abm/family/relationships.py": {"state": "dirty(vs HEAD)", "sha256": "99481FC82DCFD60DD6C8805771F276102862106AA825DB2D3535EA63E3A75353"},
+      "family_abm/ml/recorder.py": {"state": "clean(==HEAD)", "sha256": "4AB607F54A2E6756"},
+      "pyproject.toml": {"state": "clean(==HEAD)", "sha256": "6E4787C0BCCCCBDF"},
+      "README.md": {"state": "dirty(vs HEAD)", "sha256": "AFD263EEB45E6927"},
+      "tests/test_reproducibility.py": {"state": "clean(==HEAD)", "sha256": "F72668FB3294D6DCCBFA9ADF5926730FBC995E8293CBDC3CC854132C047092A5"},
+      "tests/test_simulation_and_fitting.py": {"state": "dirty(vs HEAD)", "sha256": "BD0C3382F4F7E8B4713EC1D664B24A4CB594BF4B4C0C3FE0749AB151E17820F3"}
+    }
+  },
+  "method": {
+    "read_only": true,
+    "writes": "仅本文件 audits/round2/audit_core_fitting.json",
+    "baseline_tests": "python -X utf8 -m pytest --tb=no -q -> exit=0；pytest --collect-only 统计 136 项（test_simulation_and_fitting.py 40 + test_influence.py 28 + test_packaging.py 16 + test_reproducibility.py 12 + test_data_contract.py 11 + test_readme_consistency.py 8 + test_features_nan.py 6 + test_examples_smoke.py 5 + test_experiments.py 4 + test_registration.py 4 + test_docs_consistency.py 2），全部通过",
+    "probe_scripts": [
+      "%TEMP%/audit_r2_repro_contract.py（跨进程/跨 PYTHONHASHSEED 复现哈希）",
+      "%TEMP%/audit_r2_order.py, audit_r2_order2.py, audit_r2_order3.py（注册顺序/调度顺序耦合、首步经济压力伪影、预计算内部顺序）",
+      "%TEMP%/audit_r2_pipeline.py（Simulation.step 管线、reset、动态增删、性能）",
+      "%TEMP%/audit_r2_fitter.py, audit_r2_fitter2.py, audit_r2_fitter3.py（fitter 边界、NaN 挂起隔离、量纲/哨兵）",
+      "%TEMP%/audit_r2_nan_json.py（非有限 bounds 与 JSON 契约、积分约定）",
+      "%TEMP%/audit_r2_core_edges.py（核心引擎边界）",
+      "%TEMP%/audit_r2_uuid.py（uuid 是否泄漏进结果）",
+      "%TEMP%/audit_r2_api.py（公开 API/导出一致性）",
+      "%TEMP%/audit_r2_final_checks.py（random 调度跨进程确定性、fit_global 管线、compare_models 部分失败）"
+    ]
+  },
+  "findings": [
+    {
+      "id": "A-01",
+      "severity": "P1",
+      "title": "NaN 初值 p0 让 ABMFitter 无限挂起：非有限参数进入 solve_ivp 后不返回，且全程无校验、无超时、无告警",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter2.py；观察：{\"p0_nan\": {\"status\": \"TIMEOUT>25s\", \"elapsed\": 25.01}}：make_fitter('logistic').fit_from_dataframe(合成 logistic 数据, p0=[float('nan'), 0.5]) 在 25 s 内未返回，被 terminate 杀掉；对照 p0=[0.5, 1e9]（越界但有限）2.07 s 正常收敛到 r=0.3500015, K=1.2000021。根因定位（%TEMP%/audit_r2_fitter3.py，进程级 15 s 超时）：solve_ivp(lambda tt,y: logistic_growth(tt,y,nan,0.5), [0,119], [1e-3], t_eval=T) -> TIMEOUT>15s；ABMFitter._solve(np.array([nan,0.5]), T, y0) -> TIMEOUT>15s；_objective(np.array([nan,0.5]), ...) -> TIMEOUT>15s；在 _solve 入口加 if not np.all(np.isfinite(params)): return None 后，_objective 在 0.0092 s 返回哨兵 1e12。代码位置：fitter.py:147-168（_solve，无 isfinite 检查）、fitter.py:170-176（_objective，直接调用 _solve）、fitter.py:212-219（fit_from_dataframe 直接把 p0 交给 minimize）。file_baseline=clean(==HEAD)，即该缺陷存在于 v0.1.0 提交。",
+      "impact": "库调用方一旦传入含 NaN 的 p0（上游参数扫描/优化器/数据泄漏都可能产生），拟合会无界挂起：批处理实验静默卡死、CI 超时、Web 端若将来暴露 p0 则形成拒绝服务。属于「不报错但永不结束」的最坏失败模式，比抛异常危险。",
+      "minimal_fix": "在 _solve 开头加 not np.all(np.isfinite(params)) -> return None（或 _objective 入口直接 return _SENTINEL）；并在 fit_from_dataframe/fit_robust/fit_global 的入口校验 p0、bounds 的有限性（np.isfinite）与 lo<=hi，非法即 raise ValueError（附具体索引）。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-02",
+      "severity": "P1",
+      "title": "家庭聚合通道（economic_pressure）未纳入步前预计算：同一 seed/同一配置下结果依赖 agent 注册顺序与调度器，且首步压力恒为满值 1.0（初始化伪影）",
+      "evidence": "命令：python -u %TEMP%/audit_r2_order3.py 与 audit_r2_pipeline.py。\n(1) 首步伪影（默认注册顺序 = 先 env.add_agent(hh) 再 hh.add_member）：total_income 初值 0.0 -> Household.step() 先于成员步进，读到成员 income=0.0（income 只在 step() 里才被计算）-> economic_pressure=1.000000，成员本步读到 1.0；实测 stress 单步增量 成人 +0.019033、10 岁儿童 +0.033389（相对变化 6.6%/12.7%）。若把家庭排到成员之后（members-first），成员本步读到的是初值 0.0，stress 增量降为 +0.009033/+0.003389。\n(2) 注册顺序耦合（成员动力学，120 步）：t=1 max|Δ|=2.199e-01、t=2=2.972e-02、t=5=2.496e-02、t=20=9.791e-03、t=60=3.714e-03、t=120=3.926e-03；t=120 逐状态 Δ：stress 6.34e-06、happiness 7.37e-06、economic_pressure 3.93e-03（聚合量永久错开一步）。\n(3) 隔离出是聚合通道而非影响通道：randomness=0 时 sequential vs random 在 income_baseline=0（压力关闭）下 120 步 max|Δ|=0.000e+00（逐位一致），而压力打开时 max|Δ|=2.209e-01(t=1)/3.008e-02(t=2)/7.193e-05(t=120)。\n代码位置：simulation.py:90-111（_prepare_influence 只预计算 influence_received，不含家庭聚合量）、household.py:139-161（economic_pressure 在 Household.step 内计算并直写成员）、family_member.py:244-248（同一步内读取）、environment.py:50-72（收养顺序决定 env.agents 顺序）。file_baseline：simulation.py/environment.py 的管道缺口清洁；household.py/family_member.py 属 dirty。",
+      "impact": "本轮改写的核心承诺是「机制与调度顺序解耦」（influence 通道确实做到了）。但家庭经济压力通道没有：同一模型换一种合法注册顺序（或换 Scheduler('random')）就得到不同数值，且首步会给所有成员施加一个满量程压力冲击——任何首步/短窗口/事件研究结论都被这一伪影污染（量级 0.019-0.033 stress，与影响机制同量级）。长程动力学差异衰减到 1e-6，但记录出的 total_income/economic_pressure 序列永久相差一步，会影响以它们为自变量的分析。",
+      "minimal_fix": "把家庭聚合量也做成步前预计算：在 Simulation.step 的 _prepare_influence 阶段（或新增 _prepare_household 阶段）用冻结的步初快照统一计算 total_income/economic_pressure 并写入成员，然后才进入 scheduler.step；同时把 income 的初值按模型公式在 FamilyMember.__init__ 里算出来（或把 total_income==0 视为「尚未评估」而令 pressure=0），消除首步满值伪影。另加验收测试：同一配置在 [家庭,成员] 与 [成员,家庭] 两种注册顺序下轨迹逐点一致。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-03",
+      "severity": "P2",
+      "title": "失败哨兵 1e12 与真实 MSE 碰撞：同一拟合质量在 1e3 量纲下 converged=True，在 1e6 量纲下被判为「积分失败」",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter3.py。合成 logistic 数据整体乘 scale 后拟合，观察 (r2, converged, hit_sentinel, fun)：scale=1e3 -> (-5.677405, true, false, 1.1467548890703365e6)；scale=1e6 -> (-5.734991, false, true, 1.1566445791580156e12)；scale=1e7 -> (-5.735043, false, true, 1.1566535115137952e14)。三次的 R² 几乎相同（-5.68/-5.73/-5.74）说明积分都成功、拟合质量相同，但 scale>=1e6 时 fun 越过 _SENTINEL=1e12（fitter.py:17-18），于是 _objective_hit_sentinel()（fitter.py:342-350）返回 True、converged（fitter.py:362-383）变 False，summary() 打出「目标函数停在失败哨兵上：该解未成功积分，R² 无意义」（fitter.py:428-429）。",
+      "impact": "诊断标签与事实相反：积分成功了却被报成积分失败。任何按 converged/hit_sentinel 过滤实验结果的流程，会在大状态量纲（例如把收入以「元」而非归一化值存储）下静默丢掉本应保留的（差）拟合；反之在 1e3 量纲下同一份差拟合被标为 converged=True。属于「静默产生错误结论」。源码注释已承认（fitter.py:17 「后续将改为 np.inf 并加发散闸门」）。",
+      "minimal_fix": "哨兵改为 np.inf（或 NaN）而非有限 1e12，使「失败」与「数值巨大」不可能混淆；_objective_hit_sentinel 用 np.isinf(fun) 判定；若仍要保留上限，则用与数据量纲相关的阈值（如 1e12 * ss_total_of_data）并在 summary 中说明。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-04",
+      "severity": "P2",
+      "title": "零方差数据只告警不报错，产生 converged=True 且 r_squared=0.0 —— 正是源码注释声称要消除的误导组合",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter2.py 的 data_constant 用例。数据 state_population 恒为 1.0（10 个时间点）-> _validate_data 仅 warnings.warn('Data has near-zero variance — fitting may be unreliable.')（fitter.py:141-143），拟合随后完成：r2=0.0、converged=true、params={r: 0.371456, K: 1.00000106}。对照 fitter.py:101-103 的错误文案自述：「按字母序的示意映射……很容易把模型拟到与语义无关甚至零方差的列上……从而得到 R²=0.0 却 converged=True 的误导结果」；该防护目前只存在于 Web 层的 _column_variance_report（tests/test_simulation_and_fitting.py:328-357），fitter 本体没有。",
+      "impact": "直接使用 fitter/compare_models（不经 Web）的研究者会把「数据无信息量」误读成「模型拟合成功、R²=0 说明模型无关」；批量拟合中这类条目会以 converged=True 进入汇总表。",
+      "minimal_fix": "把近零方差从 warn 升级为 fail-fast（raise ValueError，或在 ABMFitter 上加 allow_constant=False 开关）；至少令 converged 在 ss_total==0 时为 False，并在 summary_json 暴露 data_ptp/ss_total 以便审计。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-05",
+      "severity": "P2",
+      "title": "非有限输入无校验：inf 数据与 NaN/inf 边界会产出 NaN 的 summary_json，标准 JSON 序列化直接抛错",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter2.py 的 data_inf 用例：把合成数据第 5 点设为 np.inf -> _validate_data 只查 np.isnan（fitter.py:139-140），inf 通过 -> 拟合完成并给出 r2=NaN、converged=false、hit_sentinel=true（同时 stderr 出现 RuntimeWarning: invalid value encountered in subtract，来自 fitter.py:185）。命令：python -u %TEMP%/audit_r2_nan_json.py：fit_from_dataframe(df, bounds=[(nan,1.0),(0.01,1.0)]) -> converged=True, r2=0.820969, bounds=[[nan,1.0],[0.01,1.0]]；json.dumps(s, allow_nan=False) -> ValueError: Out of range float values are not JSON compliant: nan；starlette.responses.JSONResponse(summary) -> 同样的 ValueError。inf 上界同理（JSONResponse -> ValueError: ... not JSON compliant: inf）。_normalize_bounds（fitter.py:296-316）只校验数量，不校验有限性与 lo<=hi。",
+      "impact": "两个后果：(1) 非有限数据被当成有效输入，R² 变成 NaN 静默上报；(2) 含 NaN/inf 的 summary_json 不是合法 JSON，Web 端 /api/fit 或任何 JSON 导出路径会在序列化阶段抛异常（FastAPI 默认 JSONResponse 用 allow_nan=False），把「数据问题」表现成「服务器 500」。",
+      "minimal_fix": "_validate_data 增加 np.isfinite(y).all() 检查并报出首个非有限点；_normalize_bounds 校验 np.isfinite(lo/hi) 与 lo<=hi；_r_squared 在 ss_total 非有限时返回 None；summary_json 在返回前把非有限值统一转成 None（或 raise），保证 JSON 可序列化。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-06",
+      "severity": "P2",
+      "title": "多状态 R² 是混合比值：量纲相差 1000 倍的状态支配 R²，恒定状态被高 R² 掩盖且不触发告警",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter3.py 的 r2_scale_dominance 用例（wellbeing 模型自生成数据，60 步）：基准 R²=0.9999999982244738；把第二状态 stress 乘 1000 -> R²=-33.477291672398856（同一个模型、同一份结构，只因状态量纲变化就被判为灾难性拟合）；把第一状态 happiness 置为常数 0.5、第二状态照旧 -> R²=0.9879789843341071、converged=True、warnings=[]（完全无法拟合的状态被 0.988 的混合 R² 掩盖，且 _validate_data 的 ptp 判据取 max(axis=0)，只在该状态也零方差时才告警）。代码：fitter.py:178-192（ss_total/ss_res 在状态维求和后取单一比值）、fitter.py:136-143。",
+      "impact": "R² 不可跨数据集/跨量纲比较，且会掩盖单状态级别的失配；用 R² 选模型或判「拟合好坏」的结论不可靠，而报告里只给出一个标量 R²，读者无从察觉。",
+      "minimal_fix": "按状态分别计算并上报 R²（r_squared_per_state），同时保留现有多状态比值（或改用标准化残差/RMSE 向量）；对任何 ptp < tol 的状态单独告警（而不是只看 max(axis=0)）。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-07",
+      "severity": "P2",
+      "title": "_extract_aggregate_series 不区分 agent_type：Household 行会稀释同名状态列，economic_pressure 实测 0.100 被算成 0.300",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter3.py 的 aggregate_mix 用例。构造每个时刻 1 行 Household(state_economic_pressure=0.9) + 3 行 FamilyMember(state_economic_pressure=0.1)，ABMFitter(..., state_names=['economic_pressure'])._extract_aggregate_series(df) 返回首值 0.30000000000000004，而成员真值是 0.1、Household 值是 0.9（行数加权平均）。代码：fitter.py:126-134 直接 df.groupby('time') 后对全体行取均值，函数签名无 agent_type/过滤参数；StateRecorder 把 Household 与 FamilyMember 写进同一张宽表（ml/recorder.py）。",
+      "impact": "拟合目标不是任何一类智能体的序列，而是两类实体的行数加权混合。当前唯一撞名的状态是 0.2.0 新增的 economic_pressure（Household 与 FamilyMember 都有），但任何将来新增的同名状态都会静默污染 aggregate 拟合；也会让「家庭层面」与「个体层面」的结论混在一起。",
+      "minimal_fix": "给 _extract_aggregate_series 增加 agent_type 参数（默认 FamilyMember）或要求调用方显式过滤；对同一状态名同时存在于多个 agent_type 的情况给出告警；长期方案是 recorder 分类型建表并让 fitter 显式选择。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-08",
+      "severity": "P2",
+      "title": "make_fitter 的 param_fix 拼错键被静默忽略：用户以为固定了参数，实际仍在拟合",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter.py。f = make_fitter('wellbeing', income=0.5, incoem=0.9)（incoem 拼错）-> 无任何报错，f.param_names=['p','q','r','s']，拟合正常完成 fitted_param_dict={'p':0.0882,'q':0.1124,'r':0.01788,'s':0.04373}，错误的固定值 0.9 完全未被使用。代码：fitter.py:439-470，for k in param_fix: if k in all_params: all_params.remove(k) —— 不在 all_params 的键既不报错也不进入自由参数，_FixedModel.__call__ 只按键名合并（fitter.py:458-465），因此 typo 静默失效。",
+      "impact": "拟合配置与用户意图不一致且无任何提示：一次「固定 income=0.5」的比较实验可能实际在自由拟合该参数，结论（例如参数可辨识性、政策效应大小）直接错误。",
+      "minimal_fix": "make_fitter 开头校验 unknown = set(param_fix) - set(MODEL_PARAM_NAMES[model_name])，非空即 raise ValueError 列出合法参数名；并校验 param_fix 值有限。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-09",
+      "severity": "P2",
+      "title": "seed 契约需要同时满足「先建 Simulation」与「每个智能体显式传 environment=」：漏传其一即静默退回全局 RNG，跨进程不可复现",
+      "evidence": "命令：python -u %TEMP%/audit_r2_repro_contract.py before_sim；两次独立进程同 seed=2026 得到不同哈希 d660165f46ca94be4465231c90077c50 vs 089a38a0478d33aaa0427ad1b93168b7，且 global_untouched=false（仿真消耗了全局 random）。命令：python -u %TEMP%/audit_r2_order.py noenv，两次独立进程哈希 c46d4045e22fca3f vs 93cbcdea6729d3cc（此时 Simulation 先建，只是 Household/FamilyMember 没传 environment=env）。命令：python -u %TEMP%/audit_r2_pipeline.py 第 3 项：构造 FamilyMember(无 environment=) 后 random.getstate() 发生变化=True（即初始化确实消耗了全局 RNG）。对照：按 README:305-320 的推荐写法（先 Simulation(seed=...) + 每个智能体 environment=env）在 3 次同进程、2 次独立进程、PYTHONHASHSEED=0/12345、全局 random 预置不同种子等条件下哈希恒为 61f07cf8622aee97fb363c5a72266135（完全可复现）。代码：simulation.py:54-73（构造时才替换 env.rng，只覆盖之后创建的智能体）、environment.py:29（rng 默认 = 全局 random 模块）、family_member.py:96-98,129-137、household.py:43-49（dirty）。",
+      "impact": "复现性依赖两条容易遗漏的隐式约定，且违反时没有任何告警/异常，只会给出看起来正常的另一组数字。README:316-321 有说明，属文档到位但工程上没有防护；实验脚本一旦漏写 environment=env，同一 seed 的两次运行结果不同，且会消耗调用方的全局随机流（与出题「不读也不写全局 random」的承诺矛盾）。",
+      "minimal_fix": "把「未注入 RNG」做成可检测状态：Environment.rng 默认置为 None（或哨兵对象），任何智能体/关系在构造时发现 rng 是全局 random 或 None 就 warnings.warn/raise，提示先用 Simulation(seed=...)；或让 Simulation 能把已有 agent 的初始化延迟到 RNG 注入之后（两阶段 init）。同时给环境加 rng_version/seed 记录以便审计。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-10",
+      "severity": "P2",
+      "title": "reset() 之后时间轴不连续：run(3) -> reset() -> run(3) 记录出 [0,4,5,6]，公共 API 直接产出损坏序列",
+      "evidence": "命令：python -u %TEMP%/audit_r2_pipeline.py 第 5 项：run(3) -> reset() -> run(3) 后 recorder 的时间轴为 [0, 4, 5, 6]（scheduler.time=6）。代码：simulation.py:135-146 只重置 environment.time/current_step/_needs_initial_recording 与 recorder，docstring 明确承认「本方法当前不重置 Scheduler 的内部时钟……真正的重跑语义在 P2-3 中统一修正」；scheduler.py:38-43 每次 step 用 self.time 覆盖 environment.time。仓库自带测试 tests/test_simulation_and_fitting.py:91-107（test_reset_re_records_baseline）用 max(df.time) >= 2 把该缺陷固化下来，注释说明将来收紧为 == [0,1,2]。",
+      "impact": "任何「跑一段-重置-再跑」的流程（敏感性扫描复用 Simulation 的常见写法）得到的时间列有断档且与 t=0 基线不连续，之后按 time 做差分/拟合/对齐会整体错位；由于它是已知问题并被测试固化，使用者容易误以为行为符合预期。",
+      "minimal_fix": "在 reset() 中同时重置 scheduler.time=0（并把 scheduler.rng 恢复到 seed 起点，如 random.Random(self.seed)），把测试里的 >= 收紧为 == [0,1,2]；若要支持真正的重跑还需状态快照，可在 docstring 明确区分 reset_records() 与 reset_all()。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-11",
+      "severity": "P2",
+      "title": "钩子语义不自洽：post_step 内 current_step 比 env.time 小 1；recorder 先于 post_step，导致 post_step 写入当步不可见（对每步重算的状态则永远不可见）",
+      "evidence": "命令：python -u %TEMP%/audit_r2_pipeline.py 第 4 项。在 pre_step/post_step 各挂一个打印 (stage, sim.current_step, env.time, 成员 age) 的钩子，3 步输出：pre=(0,0,40.0)/(1,1,40.0833)/(2,2,40.1667)；post=(0,1,40.0833)/(1,2,40.1667)/(2,3,40.25)。即 post_step 看到更新后状态，但 current_step 恒比 env.time 小 1。同一实验里 post_step 写入 env.properties['stage']='post_step'，而 recorder 记录的 3 个 tick 全为 {'stage':'pre_step'}；另一实验在 post_step 写 income=12345，两个 tick 的记录值仍是 0.0812/0.0823（因为 income 每步被 family_member 重算覆盖，钩子写入永远进不了记录）。代码：simulation.py:113-123（pre_step -> _prepare_influence -> scheduler.step -> _record_all -> post_step -> current_step += 1），recorder 在 post_step 之前。",
+      "impact": "钩子里用 sim.current_step 打的时间戳与记录里的 env.time 差 1（与 A-10 的重置错位叠加后更难排查）；把聚合量/指标写在最自然的 post_step 里不会进入本步记录，用户会以为钩子没生效并被迫改用 pre_step（进而读到未更新状态）。",
+      "minimal_fix": "统一为：current_step += 1 之后再跑 post_step；或令 scheduler 不直接改 env.time，由 Simulation 唯一维护 time/current_step。把阶段顺序与可见性写进 Simulation 的 docstring，并提供 record_before_post_step/record_after_post_step 选项；add_hook 对未知 stage 报错（见 A-16）。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-12",
+      "severity": "P2",
+      "title": "Agent 的 attributes/state 直接持有调用方字典（别名共享），且空字典与非空字典行为不一致",
+      "evidence": "命令：python -u %TEMP%/audit_r2_core_edges.py 第 10 项：shared={'k':1}; ag=Agent(agent_id='x', attributes=shared, state=shared); shared['k']=99 -> ag.attributes == {'k': 99} 且 ag.attributes is shared 为 True；空字典场景 empty={}; ag2=Agent(agent_id='y', attributes=empty) -> ag2.attributes is not empty 为 True（被 or {} 换成了新对象）。代码：agent.py:14-16 `self.attributes = attributes or {}` / `self.state = state or {}`，无拷贝；FamilyMember(**kwargs) 透传（family_member.py:95 super().__init__(**kwargs)）。file_baseline=clean(==HEAD)。",
+      "impact": "从同一个模板 dict 批量构造一族成员时，所有智能体会共享同一份 personality/属性字典，改一个全员变（或反之，外部意外改动污染智能体内部状态）；「非空则别名、空则拷贝」使行为依赖字典内容，难以预期，也无法通过文档推断。",
+      "minimal_fix": "self.attributes = dict(attributes) if attributes is not None else {}（同理 state），并对嵌套可变值做 copy.deepcopy；或在 docstring 明确「传入容器由该对象接管、调用方不得再修改」。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-13",
+      "severity": "P2",
+      "title": "重复 agent_id 静默覆盖，被顶掉的旧对象仍持有 environment 引用（孤儿认为自己已注册）",
+      "evidence": "命令：python -u %TEMP%/audit_r2_core_edges.py 第 2 项：a1=Agent(agent_id='dup', attributes={'name':'first'}); a2=Agent(agent_id='dup', attributes={'name':'second'}); env.add_agent(a1); env.add_agent(a2) -> len(env.agents)=1、存活对象 name='second'，而 a1.environment is env2 仍为 True。第 3 项还给出叠加后果：env 中注册的是 old（同 id 的旧对象），Household.members['m1'] 却是 new —— env 中的 m1 是 'old'、家庭的 m1 是 'new'、二者 not is，家庭里那个成员永远不会被步进。代码：environment.py:59-60（self.agents[agent.id] = agent 无重复检查）、environment.py:61-68（收养时 `if member.id not in self.agents` 直接跳过，不校验对象一致性）。file_baseline：第 59-60 行在 diff 中属上下文（未改动），收养逻辑为 dirty 新增。",
+      "impact": "显式传 agent_id（README 推荐的复现做法）时，一个手误的重复 id 会让一个智能体静默消失、另一个成为调度不到的孤儿，人口统计与结果都错且无任何告警；收养时的同 id 不同对象还会造成「env 里的成员」与「家庭里的成员」不是同一对象。",
+      "minimal_fix": "add_agent 检测到同 id 时 raise ValueError（或返回 bool 并让调用方决定），并在收养分支校验 `self.agents[member.id] is member`，不一致则报错；remove_agent 已正确处理 environment=None，可复用其清理语义。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-14",
+      "severity": "P3",
+      "title": "Environment.step() 与 Scheduler 双时钟（死方法 + 时间停滞）：混用后 env.time 不前进，且整改计划承诺的验收测试不存在",
+      "evidence": "命令：python -u %TEMP%/audit_r2_core_edges.py 第 1 项：sim.run(3) 后 env.time=3/scheduler.time=3；调用一次 env.step() -> env.time=4、scheduler.time=3；再 sim.step() -> env.time 仍为 4（scheduler 用 self.time=3 自增后覆盖为 4），即两个 tick 记录到同一个时间值。代码：environment.py:101-105（自增 self.time）与 scheduler.py:38-43（environment.time = self.time）。另外全仓库检索 env.step()/environment.step( 在 family_abm/、tests/、tools/、experiments/ 中零调用，即该方法是无人使用的公共 API 陷阱。audits/remediation_plan.md:106-109 把该问题列为 P2-4 并承诺验收测试 pytest tests/test_simulation.py::test_single_clock，但 tests/ 下不存在 test_simulation.py。",
+      "impact": "公共方法看似可用，一旦被使用者（或未来的并行调度实现）调用就会破坏时间轴，且与 A-10 叠加后可产生重复/错乱的时间列；同时说明「已记录的整改项」缺少对应回归测试，容易再次回归。",
+      "minimal_fix": "删除 Environment.step()（或让它委托 scheduler），时钟唯一由 Scheduler/Simulation 维护；补上 tests/test_simulation.py::test_single_clock（混用 env.step() 与 sim.step() 后 time 单调不减且无重复）。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-15",
+      "severity": "P3",
+      "title": "Scheduler 的 method 只在首次 schedule() 时才校验",
+      "evidence": "命令：python -u %TEMP%/audit_r2_core_edges.py 第 9 项：Scheduler('bogus') 构造成功（无异常）；随后 .schedule(env) 抛 ValueError: Unknown scheduler method: bogus。代码：scheduler.py:17-36（__init__ 不校验，schedule 的 else 分支才 raise）。",
+      "impact": "配置错误被推迟到仿真开始后才暴露（长仿真里可能在跑了几分钟后才失败）；错误信息也未列出合法取值。",
+      "minimal_fix": "在 __init__ 用白名单校验并 raise，错误信息列出 'sequential'/'random'/'random_activation'。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-16",
+      "severity": "P3",
+      "title": "Simulation.add_hook 对未知 stage 静默丢弃（拼写错误的钩子永不执行且无提示）",
+      "evidence": "命令：python -u %TEMP%/audit_r2_core_edges.py 第 5 项：s.add_hook('post_step_typo', fn) 后 hooks={'pre_step': 0, 'post_step': 0}，钩子无处安放且无异常。代码：simulation.py:82-84 `if stage in self.hooks: self.hooks[stage].append(func)`。",
+      "impact": "与 A-11 的时序困惑叠加：用户写错阶段名后既没有错误也没有效果，会误判为「钩子机制不生效」。",
+      "minimal_fix": "else 分支 raise KeyError/ValueError 并列出可用 stage。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-17",
+      "severity": "P3",
+      "title": "run_until 无返回值、条件初始为真时 0 步、达到 max_steps 时静默放弃",
+      "evidence": "命令：python -u %TEMP%/audit_r2_core_edges.py 第 6 项：run_until(lambda env: True, max_steps=10) -> current_step=0 且返回 None；run_until(lambda env: False, max_steps=7) -> current_step=7 且无任何「未收敛」信号。代码：simulation.py:129-133。",
+      "impact": "调用方无法区分「条件满足而停止」与「步数耗尽而放弃」，批量实验会把未达标的结果当成达标结果记录下来。",
+      "minimal_fix": "返回 bool 或枚举（satisfied/max_steps），或在 exhausted 时 warn/raise；docstring 明确条件在步进前判定。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-18",
+      "severity": "P3",
+      "title": "共享 Environment 的多个 Simulation / 运行中替换 env.rng 会导致 RNG 上下文不一致且无告警",
+      "evidence": "命令：python -u %TEMP%/audit_r2_core_edges.py 第 7 项：s7a=Simulation(e7, seed=1) 后 r1=e7.rng；再 s7b=Simulation(e7, seed=2) -> e7.rng 被替换、e7.seed=2，而 s7a.scheduler.rng is r1 仍为 True（与 e7.rng 不再一致），此时若继续用 s7a 步进，调度器用旧随机流、智能体用新随机流。第 12 项：运行中 e12.rng = random.Random(999) 后，s12.scheduler.rng is e12.rng 为 False，无任何告警。代码：simulation.py:65-70（构造时替换 env.rng 与 scheduler.rng）。",
+      "impact": "多仿真共用环境（例如对比实验、参数扫描复用 env）时随机流被静默切换，结果既不可复现也难以归因；单次运行中热替换 RNG 会让「谁用哪条流」不可追踪。",
+      "minimal_fix": "Simulation.__init__ 检测 env.rng 已被其它 Simulation 注入过（或 env.seed 已设置）时 warn/raise；提供 env.set_rng() 统一入口，同时更新所有已注册 scheduler 的 rng；runner 侧禁止直接赋值。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-19",
+      "severity": "P3",
+      "title": "第一步之后才加入的 recorder 永远拿不到 t=0 基线",
+      "evidence": "命令：python -u %TEMP%/audit_r2_pipeline.py 第 11 项：先 sim.run(2)，再 sim.add_recorder(rec)，再 sim.run(1) -> rec 的记录时间只有 [3]（t=0 基线在第一次 step 时已消耗 _needs_initial_recording，见 simulation.py:73,113-117），新 recorder 直接从中途开始。",
+      "impact": "中途接入的记录器（例如根据条件开启某个指标采集）时间轴缺基线且与其他 recorder 不对齐，后续按 time 合并/拟合会错位。",
+      "minimal_fix": "add_recorder 时若已步进过至少一步，立即对该 recorder 记录一次当前状态（或提供 record_current(recorder) 方法）并在 docstring 说明。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-20",
+      "severity": "P3",
+      "title": "同一类里两套积分/返回约定：_solve 返回 (n_t, n_states)，predict/solve_model 返回 (n_states, n_t)，且 solve_model 不接受 max_step",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter3.py predict_shapes -> t=(20,), y=(1, 20)；同脚本内 _solve 返回 (20, 1)。二者数值差：python -u 单行脚本测得 max abs diff 7.617425739070427e-07、max rel diff 1.1324795964185766e-06（相当于 rtol=1e-6 的积分容差，不是正确性错误）。代码：fitter.py:147-168（_solve，传 max_step=mean(diff(t))）vs fitter.py:354-358（predict -> lanchester.solve_model，lanter.py:123-135，无 max_step、失败时 raise 而非返回 None）。",
+      "impact": "调用方极易把两种形状搞混（转置后画图/比较会静默错位）；两处积分器步长控制不同使同一参数下的预测轨迹有 ~1e-6 差异，跨模块比较（如 plot_fit_diagnostics 与 _objective）时需注意。",
+      "minimal_fix": "统一返回约定（建议都在文档里标注形状，predict 内部返回 transposed 或提供 predict_states），并让 solve_model 支持 max_step 以与 _solve 一致。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-21",
+      "severity": "P3",
+      "title": "所有参数都被 param_fix 固定时 n_params=0，报错信息晦涩",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter.py：make_fitter('logistic', r=0.35, K=1.2) -> n_params=0, param_names=[]，随后 fit_from_dataframe(df) 抛 ValueError: not enough values to unpack (expected 2, got 0)。代码：fitter.py:439-470（全部固定后 all_params 为空）、fitter.py:295-316（_normalize_bounds 默认返回 [(1e-4,5.0)]*0 = []）、fitter.py:212-219（把空 p0/bounds 交给 minimize）。",
+      "impact": "「固定全部参数、只评估 R²/预测」（一种合理用法）得不到清晰指引，用户看到的错误与真实原因（没有自由参数）无关。",
+      "minimal_fix": "make_fitter 在 all_params 为空时 raise ValueError('没有自由参数：请至少保留一个待拟合参数，或改用 predict 评估')；fit_* 入口也检查 n_params>0。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-22",
+      "severity": "P3",
+      "title": "时间轴无单值/单调性校验：重复 time 被接受；time 全同则报出误导性错误或哨兵且无告警",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter2.py dup_time 用例：把首行时间重复一次后拟合 -> r2=0.9999999999966663, converged=true, hit_sentinel=false（无任何提示）。命令：python -u -c 探针（10 行 time 全为 5.0，聚合路径）-> ValueError: Need at least 10 time points, got 1（真实原因是时间轴退化，不是点数不足）；同一数据走 agent_id 路径 -> r2=None, converged=False, hit_sentinel=True, warnings=[]（把「时间轴退化」报成「积分失败」）。代码：fitter.py:136-143（只校验 len 与 NaN）、fitter.py:113-134（sort_values 后不校验唯一性）、fitter.py:156（max_step=mean(diff(t)) 在退化时间轴上为 0）。",
+      "impact": "数据拼装事故（例如 reset 后拼接、多个 run 合并）不会被发现，反而可能给出很高的 R²；时间轴退化时错误信息把根因指向别处，浪费排查时间。",
+      "minimal_fix": "_validate_data 增加：t 严格递增且唯一（np.all(np.diff(t) > 0)），失败时给出明确信息（含重复/退化位置）；max_step 用 max 或 len(t)>1 保护。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-23",
+      "severity": "P3",
+      "title": "compare_models 中任一模型失败会中断整个比较并丢弃已成功的结果",
+      "evidence": "命令：python -u %TEMP%/audit_r2_final_checks.py compare_partial：compare_models(df, ['wellbeing','influence'], robust=False, state_mappings={'influence': {'O1':'nope','O2':'nope2'}}) -> 抛 ValueError（模型状态找不到列），调用方拿不到已经完成的 wellbeing 结果。代码：fitter.py:473-507（循环内直接调用 fit_*，不捕获异常，也没有 errors='ignore'/返回部分结果的选项）。",
+      "impact": "批量模型比较（Web 端与实验脚本都可能用）因为一个模型的映射问题整体失败，之前算出的结果被丢弃；在 Web 上可能表现为整次请求失败。",
+      "minimal_fix": "增加 on_error='raise'|'skip' 参数（默认保持现状），skip 时返回 {model: None/失败原因}，并保持 state_mappings 的校验；或在异常信息中附带已完成的模型结果。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-24",
+      "severity": "P3",
+      "title": "_prepare_influence 每步重建参数字典并全量扫描 agent：1000 智能体实测占 27% 墙钟",
+      "evidence": "命令：python -u %TEMP%/audit_r2_pipeline.py 第 8 项（200 户 × 5 成员 = 1000 家族成员，20 步）：保留 _prepare_influence 时 0.32 s，把它替换为 no-op 时 0.23 s，开销 27.1%。代码：simulation.py:90-111 每步执行 `from ..family.family_member import DEFAULT_PARAMS`、`params = dict(DEFAULT_PARAMS); params.update(...)`（每步一次字典拷贝）、`self.environment.get_agents()` 全量遍历，并对每个家庭调用 prepare_received_influence。",
+      "impact": "在没有任何家庭/影响机制关闭（influence_strength=0）时也要付出这份开销；大规模实验（1e4-1e5 智能体）下成为主要固定成本之一。",
+      "minimal_fix": "把参数合并与「是否存在带 members 的容器」缓存到 Environment/Simulation（env.params 变更时失效），模块级导入移到顶部，并用一次 get_agents 结果与容器清单复用；关闭影响机制时直接早退。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-25",
+      "severity": "P3",
+      "title": "README 声称稳定 id 是复现关系初值的必要条件，实测 uuid 与稳定 id 结果完全相同（关系种子由家庭名+加入序号+容器序号派生，agent_id 不参与）",
+      "evidence": "命令：python -u %TEMP%/audit_r2_uuid.py uuid 三次独立进程（不传任何 agent_id/household_id）-> 哈希恒为 a2a74becd50cdec9306cb5a5；python -u %TEMP%/audit_r2_uuid.py stable 两次 -> 同样是 a2a74becd50cdec9306cb5a5（按 (time, attr_name) 排序，与 uuid 无关）。（若按 agent_id 排序比较会因 uuid 不同而假阳性，这也是该实验的关键设计。）命令：python -u %TEMP%/audit_r2_order2.py 第 D 项：把 relationships 字典插入顺序反转后，所有 (affection, trust, conflict) 逐位相同 -> True。代码：family_abm/family/relationships.py:51-63（_make_rng 用 (seed, scope, identity, relation_type) 做字符串种子）、household.py:88-92（_member_label = 家庭名 + 在 members 中的加入序号）。README:316-321 则说「若需要跨运行复现关系初值，请给 Household(household_id=...) 与 FamilyMember(agent_id=...) 传稳定 id」。",
+      "impact": "文档把「可选」写成「必要」，会诱导使用者以为必须给所有成员编稳定 id 才能复现（实际上关系种子根本不含 agent_id）；反过来说，真正影响关系初值的是「家庭名 + add_member 的加入顺序 + 容器序号」，这一点文档没有点明——重排 add_member 会改变关系种子，而文档暗示改 id 就够。",
+      "minimal_fix": "把 README 该段改为准确表述：关系种子 = (seed, 容器序号, 家庭名, 成员加入序号, 关系类型)，因此「加入顺序」必须固定；agent_id 只影响记录表行序与可视化，不影响数值。或在 _make_rng 的 identity 中改用 agent_id 以获得对加入顺序不敏感的种子。",
+      "confidence": "high"
+    },
+    {
+      "id": "A-26",
+      "severity": "P3",
+      "title": "p0 越界被 scipy 静默裁剪，fitter 不做任何提示",
+      "evidence": "命令：python -u %TEMP%/audit_r2_fitter2.py：fit_from_dataframe(DF, p0=[0.5, 1e9]) 在 2.07 s 内正常完成并收敛到 r=0.3500015222038094, K=1.2000020886619083（无 warning）。代码：fitter.py:212-219（p0 原样交给 scipy.optimize.minimize；当前 scipy 会把不可行的 x0 裁剪到边界内）。",
+      "impact": "用户设想的初值点与实际优化起点不同，参数扫描/多起点设计的意图被静默改变；更换 scipy 版本时行为还可能变化（旧版会直接报错）。",
+      "minimal_fix": "fit_* 入口校验 np.all(p0 >= lb) and np.all(p0 <= ub)，越界即 raise（或明确 warn 并报告裁剪后的起点）。",
+      "confidence": "medium"
+    }
+  ],
+  "verified_ok": [
+    {
+      "id": "V1",
+      "what": "可复现性契约在推荐路径上真实成立（跨进程、跨 PYTHONHASHSEED、与全局 random 隔离）",
+      "evidence": "python -u %TEMP%/audit_r2_repro_contract.py canonical 三次同进程 -> 哈希恒为 61f07cf8622aee97fb363c5a72266135；PYTHONHASHSEED=0 与 12345 两次独立进程 -> 同一哈希；预先 random.seed(11111)/random.seed(987654321) 后哈希不变且 global_untouched=true；seed=None 两次 -> 65c4eee44894046a6a7dd4eabb803bcd 且 env.seed=42（默认种子生效）。",
+      "why_no_issue": "Simulation.__init__ 始终创建独立 random.Random(seed) 并注入 environment.rng 与 scheduler.rng（simulation.py:61-70），智能体与关系都从该实例取数；关系另按身份派生独立 RNG，因此不受迭代顺序与 uuid 影响。"
+    },
+    {
+      "id": "V2",
+      "what": "影响机制的步前预计算确实与调度顺序解耦（本轮改写的核心承诺，在 influence 通道成立）",
+      "evidence": "python -u %TEMP%/audit_r2_order3.py：randomness=0 且 income_baseline=0（关闭家庭压力通道）时，Scheduler('sequential') 与 Scheduler('random') 跑 120 步，成员全部状态逐点 max|Δ|=0.000e+00；一旦打开压力通道即出现差异（见 A-02），从而把差异精确定位到聚合通道而非影响通道。",
+      "why_no_issue": "_prepare_influence 把 influence_received 固定为步初状态的函数并在 scheduler.step 之前写入（simulation.py:90-119、influence.py:292-316），成员 step 只应用不重算（family_member.py:269-276）。另外我验证过预计算内部也不受 members 字典顺序影响（audit_r2_order2.py 第 C 项：反转 members 顺序后 influence_received 与 influence 存量逐位相同）——原因是 source_weight 的 capacity 在加权平均的分子分母中约掉，因此对来源能力同比缩放不敏感。"
+    },
+    {
+      "id": "V3",
+      "what": "关系 RNG 派生与迭代顺序、字典插入顺序、uuid 无关",
+      "evidence": "python -u %TEMP%/audit_r2_order2.py 第 D 项：反转 household.relationships 插入顺序后所有关系的 (affection, trust, conflict) 完全相同（True）；python -u %TEMP%/audit_r2_uuid.py：uuid 与稳定 id 两条路径的全程状态哈希相同；random/random_activation 调度器两次独立进程哈希相同（a94ec45abdc9fb1ee93ea6e3 / c22b5285a7955f2c38f7f764）。",
+      "why_no_issue": "每条关系持有由 random.Random(字符串种子) 派生的独立流，且 _unique_relationships 按 (agent_a_id, agent_b_id) 排序（household.py:116-129），不再依赖 set 的哈希序。"
+    },
+    {
+      "id": "V4",
+      "what": "状态列解析不再静默猜测，错误信息可操作",
+      "evidence": "python -u %TEMP%/audit_r2_fitter.py 第 5 项：缺 state_ 前缀 / 映射到不存在的列 / 两个状态映射到同一列 / 抽象状态名在没有映射时，全部抛 ValueError，信息含「期望列名 + 可用状态列 + 请显式传入 state_mapping」且不再内嵌按字母序的示意映射（fitter.py:57-107）。compare_models 对未请求模型的 state_mappings 键也报错（fitter.py:494-497）。",
+      "why_no_issue": "这是对历史上「R²=0.878 实际拟到零方差列」的正确修复；tests/test_simulation_and_fitting.py:195-221 已覆盖。"
+    },
+    {
+      "id": "V5",
+      "what": "拟合器的失败路径总体上 fail-loud（除 A-01/A-03 两处例外）",
+      "evidence": "predict 未拟合 -> RuntimeError('Call fit_*() before predict().')；fit_robust(n_starts=0 或 -1) -> RuntimeError('All fitting attempts failed.')；make_fitter 未知模型 -> KeyError 并列出可选模型；有限数据的 summary_json 可被 starlette JSONResponse 正常序列化（python -u %TEMP%/audit_r2_final_checks.py selfconsistency -> finite_data_summary_json_ok=true）。",
+      "why_no_issue": "sentinel/converged 的判定逻辑（fitter.py:342-383）在正常量纲下既能识别积分失败又能如实上报负 R²，且参数贴边只作为告警不影响 converged——这是对历史两次误判的正确修复。"
+    },
+    {
+      "id": "V6",
+      "what": "容器型智能体的成员收养/联动移除是对称且正确的",
+      "evidence": "python -u %TEMP%/audit_r2_core_edges.py 第 4 项：env.add_agent(hh) 收养成员；env.remove_agent(hh.id) 后 env.agents 为空、成员与家庭的 environment 均被置 None。add_agent 对「先 add_member 后 add_agent」与相反顺序都能得到 [家庭, 成员...] 的插入顺序（environment.py:50-72 的 docstring 与实现一致）。",
+      "why_no_issue": "修掉了上一轮「成员先加入就永不步进」的静默失效；仅在重复 id 的场景下退化（见 A-13）。"
+    },
+    {
+      "id": "V7",
+      "what": "fit_global 的 bounds 管线可用且能恢复已知参数",
+      "evidence": "python -u %TEMP%/audit_r2_final_checks.py globals（把 differential_evolution 的 maxiter 降到 15、popsize=5 以便快速验证）：fit_global(df, bounds=Bounds(lb=[0.01,0.01], ub=[1.0,2.0])) -> params={r:0.35000044, K:1.19999683}, r2=0.9999999999868795, bounds_stored=[[0.01,1.0],[0.01,2.0]]；不传 bounds -> 默认 [(1e-4,5.0)]^n 且同样恢复真值。",
+      "why_no_issue": "_normalize_bounds 同时接受 list[(lo,hi)] 与 scipy.optimize.Bounds（fitter.py:296-316），DE 用 polish=True 的 L-BFGS-B 收尾也正常。"
+    },
+    {
+      "id": "V8",
+      "what": "公开 API 与导出完全一致、版本单一真源、核心导入不依赖 web 依赖",
+      "evidence": "python -u %TEMP%/audit_r2_api.py：family_abm.__all__ 共 41 项，missing_in_module=[]、duplicates=[]、sorted=true、public_callables_not_exported=[]；family_abm.core.__all__=['Agent','Environment','Scheduler','Simulation'] 且全部可解析；from family_abm import * 与 from family_abm.core import * 均成功；__version__='0.1.0' == pyproject [project].version；fastapi_imported_by_family_abm=false（web 依赖不再污染核心导入）。签名与我读取的源码一致（Simulation(environment, scheduler=None, record_initial=True, seed=None) 等）。",
+      "why_no_issue": "上一轮报告的「安装即崩/导出不一致」类问题已修：pyproject 声明 numpy/pandas/scipy/matplotlib/fastapi/uvicorn/jinja2/pydantic，networkx 为可选 extra，setup.py 退化为不重复声明的兼容层。"
+    },
+    {
+      "id": "V9",
+      "what": "既有测试基线全绿",
+      "evidence": "python -X utf8 -m pytest --tb=no -q -> exit=0；pytest --collect-only -q 统计 136 项（含 test_simulation_and_fitting.py 40、test_influence.py 28、test_packaging.py 16、test_reproducibility.py 12），全部通过。注意：pytest -q 在本环境没有输出总结行（输出被写成 UTF-16 且无 'passed' 行），因此数量以 --collect-only 的按文件计数求和为准。",
+      "why_no_issue": "说明本轮发现的问题都在现有测试覆盖之外（例如 NaN 初值挂起、首步压力伪影、聚合通道顺序耦合、非有限 bounds/数据的 JSON 契约），不是既有测试失败。"
+    }
+  ],
+  "known_open_items_from_previous_rounds": [
+    "P2-4 双时钟（本轮 A-14 复核仍存在，且承诺的 tests/test_simulation.py::test_single_clock 不存在）",
+    "P2-3 reset 完整语义（本轮 A-10 复核仍存在，测试用 >= 固化）",
+    "P1-2 哨兵改 np.inf（本轮 A-03 给出量纲碰撞的可执行证据）"
+  ],
+  "notes": [
+    "本次审计只读；未修改任何被跟踪文件，唯一的写操作是生成本文件。所有实验脚本写在 %TEMP%，用 PYTHONPATH 指向仓库根运行。",
+    "工作树在审计开始前即为脏（33 项 git status，含 14 个 tracked 修改 + 4 个未跟踪的新测试；未提交改动的时间戳一致为 2026-10-11 16:00:51）。发现项已按 file_baseline 标注 clean(==HEAD)/dirty(vs HEAD)，以便区分「v0.1.0 就存在」与「未提交改动引入」。",
+    "范围外的相邻模块（web/app.py 的 JSON 出口、ml/recorder.py 的宽表、viz）仅在与本任务结论直接相关时被引用为证据，未逐文件审查。",
+    "A-02 的量级需要按用途解读：首步 stress 伪影 0.019-0.033（相对 6.6%-12.7%）对首步/短窗口/事件研究是实质影响；20 步以后成员动力学差异衰减到 1e-3 以下、120 步约 4e-3（主要来自 economic_pressure 的永久一步错位）。若评审认为长程影响可忽略，可降级为 P2，但「同一 seed 换注册顺序结果不同」这一契约违反本身建议按 P1 处理。"
+  ]
+}

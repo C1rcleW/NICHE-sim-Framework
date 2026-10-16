@@ -194,10 +194,15 @@ def apply_influence(
     ``role_switch``
         1 = 跨过成年阈值后由"接受影响"转为"施加影响"；0 = 关闭（消融对照）。
 
+    参数与状态读取一律 ``float(x.get(k, default))``，**不加 ``or`` 兜底**：
+    ``0 or 1.0 == 1.0``——``or`` 会把用户显式设为 0 的参数（如把
+    ``susceptibility_scale`` 置 0 以完全关闭易感性的消融条件）静默改写回默认值，
+    使实验条件被篡改且无任何报错；同理健康为 0 不应被 ``or 1.0`` 当成满血。
+
     本函数只写 ``member`` 自身状态，不修改其它智能体。
     """
-    strength = float(params.get("influence_strength", 0.0) or 0.0)
-    role_switch = float(params.get("role_switch", 1.0) or 0.0) >= 0.5
+    strength = float(params.get("influence_strength", 0.0))
+    role_switch = float(params.get("role_switch", 1.0)) >= 0.5
     age = member.get_attribute("age")
     adult_side = is_influencing(age, role_switch)
 
@@ -207,12 +212,12 @@ def apply_influence(
             _decay_own_stock(member)
         return 0.0
 
-    use_stages = float(params.get("use_life_stage_susceptibility", 1.0) or 0.0) >= 0.5
+    use_stages = float(params.get("use_life_stage_susceptibility", 1.0)) >= 0.5
     openness = (
         susceptibility(
             age,
-            scale=float(params.get("susceptibility_scale", 1.0) or 1.0),
-            shift=float(params.get("stage_shift_years", 0.0) or 0.0),
+            scale=float(params.get("susceptibility_scale", 1.0)),
+            shift=float(params.get("stage_shift_years", 0.0)),
         )
         if use_stages
         else 0.50
@@ -230,11 +235,11 @@ def apply_influence(
         weight = source_weight(member, source, household)
         if weight <= 0.0:
             continue
-        capacity = float(source.get_state_value("influence", 0.0) or 0.0)
-        energy = max(0.0, min(1.0, float(source.get_state_value("health", 1.0) or 1.0)))
+        capacity = float(source.get_state_value("influence", 0.0))
+        energy = max(0.0, min(1.0, float(source.get_state_value("health", 1.0))))
         effective = weight * capacity * energy
         total_weight += effective
-        weighted_target += effective * float(source.get_state_value("happiness", 0.0) or 0.0)
+        weighted_target += effective * float(source.get_state_value("happiness", 0.0))
 
     if total_weight <= 0.0:
         _decay_own_stock(member)
@@ -248,7 +253,7 @@ def apply_influence(
     share = 1.0 / max(1, recipients)
 
     target = weighted_target / total_weight
-    gap = target - float(member.get_state_value("happiness", 0.0) or 0.0)
+    gap = target - float(member.get_state_value("happiness", 0.0))
     received = strength * openness * share * gap
     # 仅在确有噪声时抽取：sigma=0 的 gauss 也会推进一步随机数状态，
     # 而预计算每步对每个成员都会调用本函数——无效消耗会让同一条随机流
@@ -277,7 +282,7 @@ def _decay_own_stock(member: Any) -> None:
     if member.get_attribute("age") < ADULTHOOD_AGE:
         member.set_state_value("influence", 0.0)
         return
-    stock = float(member.get_state_value("influence", 0.0) or 0.0)
+    stock = float(member.get_state_value("influence", 0.0))
     if stock <= 0.0:
         stock = initial_influence_stock(member.get_attribute("age"))
     stock *= (1.0 - INFLUENCE_DECAY)

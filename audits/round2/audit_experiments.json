@@ -1,0 +1,201 @@
+{
+  "stream": "E",
+  "commit": "fe561357fc58eb48c05f47c698c6215a6dd33336",
+  "commit_note": "工作树 HEAD=fe56135。工作树并非干净：README.md、docs/研究设计.md、experiments/{mechanism_validation,sensitivity_analysis}.py、experiments/results/*.json、baseline/default_seed42.json、family_abm/{core/environment,family/family_member}.py、examples/* 均有未提交修改。本审计基于**当前工作树**内容；结论对应当前工作树，不保证对应 HEAD 提交。",
+  "method": {
+    "env": "Python 3.14.3 (C:\\Python314\\python.exe)；numpy 2.4.3 / pandas 3.0.2 / scipy 1.17.1 / matplotlib 3.10.9 / Pillow",
+    "readonly_discipline": "严格只读：未修改 experiments/、family_abm/、docs/、baseline/ 或任何被跟踪文件。全部重跑产物写入 C:\\Users\\asus\\AppData\\Local\\Temp\\rt2\\（--json/--plot 指向 TEMP）。唯一写入 = 本文件。",
+    "independence": "不采信 experiments/results/*.json 的 verdict/tally/结论字段。所有数字先由自写脚本独立复算，再与 JSON / README / docs 三处对照。E1 另用自写分段函数逐点比对模块曲线；E2 另用「先按 seed 求比再平均」这一与模块不同的聚合顺序复核；E3/E4 的 SNR 与噪声用自写实现重算；另用像素级读取校验 PNG 是否真由该 JSON 绘出。",
+    "key_move": "把三个生成脚本以**各自的默认参数**重跑到 TEMP，再与版本控制的 experiments/results/*.json 逐字段比较 —— 这直接回答「对外声称的数字能否由当前代码产出」。",
+    "reproducers": [
+      "%TEMP%/rt2/bench.py               运行成本基准",
+      "%TEMP%/rt2/recompute_e1_e4.py     E1-E4 独立复算 + seed 数敏感性",
+      "%TEMP%/rt2/verify_sens_reduc.py   敏感性 tally + 可约性 + EN_LABELS",
+      "%TEMP%/rt2/seed_sens.py           敏感性结论对 seed 数的敏感性（全网格重跑）",
+      "%TEMP%/rt2/noise_floor.py         可约性噪声地板 + PNG 溯源",
+      "%TEMP%/rt2/png_and_clamp.py       PNG/JSON 时间戳 + CLAMP_LIMIT 敏感性",
+      "%TEMP%/rt2/pixel_check.py         PNG 像素级 vs JSON 校验",
+      "%TEMP%/rt2/regen_mv.json|regen_sens.json|regen_lsr.json   三个脚本的默认参数重跑产物"
+    ],
+    "stored_result_metadata": {
+      "mechanism_validation.json": "seeds=[1000,1001,1002,1003,1004,1005] (6), steps=300",
+      "sensitivity_analysis.json": "seeds=[1000,1001,1002] (3), steps=300",
+      "life_stage_reducibility.json": "seed=42 (1), steps=240"
+    }
+  },
+  "claims": [
+    {
+      "claim": "E1 单调性违例 0 次、阶段边界跳变 2.5e-05",
+      "source": "README.md:58；docs/研究设计.md:158",
+      "recomputed": "违例=0：我在 age 0..45 步长 0.25 上扫描 np.diff(curve)>1e-12 → 0；严格 >0 判定 → 0。模块曲线与我自己手写的分段线性期望曲线逐点差 0.000e+00；各阶段中点值 0.85/0.75/0.50/0.28/0.15/0.10 与理论值 delta=0.0e+00。边界跳变实测 b=1.0→1.0e-05、3.0→1.0e-05、6.0→2.5e-05、12.0→2.2e-05、18.0→1.3e-05、40.0→5.0e-06，最大=2.500000e-05，与文档一致；重新运行 experiments/mechanism_validation.py 得到完全相同的 2.4999999999941735e-05。用极限侧探针（b±1e-9）测得跳变仅 1.0e-10 / 1.0e-10 / 2.5e-10 / 2.2e-10 / 1.3e-10 / 5.0e-11，随探针宽度线性趋 0 → 函数处处连续。",
+      "verdict": "成立",
+      "note": "数值与机制均成立；E1 是确定性纯函数、与 seed 无关，也是唯一在重跑中逐位复现的部分。唯一措辞问题：2.5e-05 是探针半宽 1e-4 乘斜坡斜率 0.25 的伪影，真实不连续量为 0（见 E-03）。附带：最小阶段「婴儿期(0-1)」因 end-start<2 被 plateaus 循环 continue 跳过，7 段中只看 6 段（见 E-08）。"
+    },
+    {
+      "claim": "E2 效力比 1.128 → 0.833 → 0.026 → 0.017 随阶段单调递减",
+      "source": "README.md:59；docs/研究设计.md:164-171（表1）",
+      "recomputed": "以生成脚本的默认参数（6 种子 [1000..1005]、strength=4、300 步）**重新运行当前代码**，得到 1.139129 / 0.837884 / 0.026102 / 0.015101 —— 与存储 JSON（1.128207 / 0.833443 / 0.026387 / 0.016709）及 README 的 1.128/0.833/0.026/0.017 **均不一致**（各段差 0.004–0.011）。逐格比较：重跑与存储的 E2 observed_ratio 全部 DIFF。按 seed 求比再平均（与模块不同的聚合顺序）得：学前期 1.6500±0.3488、学龄期 0.8068±0.1683、青春期 0.0148±0.0010、成年早期 0.0073±0.0062 —— 前两阶段的 seed 间 sd 与两阶段差值同量级，统计上不可分辨。",
+      "verdict": "需限定",
+      "note": "「效力比随发展阶段单调递减」只在学龄期→青春期这一步（0.83→0.026，约 30 倍）稳健成立，前两段不可分辨。同时文档给出的 4 个数字来自过时的结果文件，用当前代码复跑会得到不同数字（见 E-01、E-02）。另注：模块判据 mechanism_validation.py:254 为 `b <= a*1.05+1e-9`，容忍 5% 的上升，故「单调递减」措辞强于实际判据。"
+    },
+    {
+      "claim": "E3 剂量-反应单调（信噪比 3.7–4.8）；可信强度上限为 4，超过后状态触界使结论失效",
+      "source": "README.md:60；docs/研究设计.md:177-190（表2）",
+      "recomputed": "以默认参数重跑当前代码：strength 0.5/1/2/4/8/16 的平均偏离 0.042757/0.052317/0.059055/0.063188/0.078233/0.094649，配对噪声 0.009250/0.011871/0.013922/0.017653/0.285500/0.281050，SNR 4.6223/4.4070/4.2417/3.5795/0.2740/0.3368，触界比例 0/0/0/0/49.11%/55.43%；monotone(clean)=True，clean_upper_bound=4.0。存储 JSON 为 0.043667/0.053388/0.060232/0.064431/0.078861/0.094659、SNR 4.8084/4.5762/4.4004/3.731/0.2762/0.3368、触界 0/0/0/0/50.11%/55.43% —— **逐点 DIFF**（文档表2 等于存储 JSON，而非当前代码输出）。SNR 区间对 seed 数敏感：seeds=2→[7.20,8.94]、3→[4.87,5.89]、6→[3.58,4.62]、12→[3.37,4.33]。根因之一：配对噪声用 np.std 默认 ddof=0 的跨 seed 标准差（mechanism_validation.py:302），n=1 时恒为 0（SNR 发散到 5e10 量级，实测 seeds=[1000] 时 SNR=4.996e10），n 小时系统性低估方差 → SNR 系统性高估。",
+      "verdict": "需限定",
+      "note": "定性结论成立且可复现（无钳位区单调、strength≥8 时约半数帧触界、越界后 SNR 崩塌）。两点限定：(a) README 的「3.7–4.8」既非当前代码输出（当前 6 种子为 3.58–4.62），也未声明 seed 数，且随 seed 数系统下移；(b)「可信强度上限=4」是触界阈值 CLAMP_LIMIT=0.01（sensitivity_analysis.py:61，无推导）与强度网格 {0,0.5,1,2,4,8,16} 的产物：4 与 8 之间无采样点，代码 docstring 自己写的是「strength≥8 时近半帧触界」，即边界在 4 与 8 之间（见 E-04、E-05）。"
+    },
+    {
+      "claim": "E4 童年/成年信噪比 3.74/3.53、衰减到童年期的 6.7%",
+      "source": "README.md:61；docs/研究设计.md:196-201（表3）",
+      "recomputed": "以默认参数重跑当前代码：童年 dev=0.107602 noise=0.029828 SNR=3.6074；成年 dev=0.007086 noise=0.002273 SNR=3.1171；decay_ratio=0.0659。存储 JSON 为 childhood SNR=3.7422、adulthood SNR=3.5309、decay=0.0669 —— **DIFF**（成年 SNR 差 13%）。衰减比对 seed 数不敏感：seeds=1→0.0833、2→0.0713、3→0.0703、6→0.0659、12→0.0637（±10% 波动，无系统漂移）。SNR 随 seed 数下移：童年 1.25e11(1)/7.45(2)/4.91(3)/3.61(6)/3.40(12)；成年 1.04e10(1)/4.53(2)/4.20(3)/3.12(6)/2.92(12)。",
+      "verdict": "需限定",
+      "note": "「成年后仍可分辨」与「衰减到童年期的 ~6.7%」两条核心结论成立，衰减比是本轮少数对 seed 数不敏感的量（0.064–0.083）。但报告值（3.74/3.53）既非当前代码输出（3.61/3.12），也未声明 seed 数，且与 E3 同源受 ddof=0 噪声低估影响。"
+    },
+    {
+      "claim": "敏感性分析：五条结论在 25/25 或 75/75 组合下成立；可信强度上限范围 2.0–8.0",
+      "source": "README.md:67；docs/研究设计.md:219-227（表4）",
+      "recomputed": "**决定性复算**：以脚本默认参数（--seeds 3、steps 300，与存储 JSON 完全相同的 CLI）重跑 experiments/sensitivity_analysis.py：P1 25/25、**P2 24/25**、P3 25/25、P4 25/25、P5 75/75；P2 的 verdict 由 robust=True 变为 **robust=False**。存储 JSON 为 P2 25/25（robust=True）。逐格比较 P2 判定：24/25 格相同、1 格翻转。我另用同一 SHIFTS×SCALES 网格只改 seed 数复跑：P2 seeds=3→24/25、6→19/25、12→20/25；P3 seeds=3→25/25、6→24/25、12→22/25；P4 在 2/3/6/12 种子下均 25/25；P5 在 2/3/6 种子下均 75/75。clean_upper_bound 取值集合 = {2.0,4.0,8.0}，其中 8.0 只出现在 4 个格点（shift∈{-3,-2}, scale∈{0.7,0.85}），且 8 恰是该扫描强度网格 [0,0.5,1,2,4,8] 的端点。P5 判据仅 adulthood_snr>1.0，而实测成年 SNR 约 3–4，是阈值的 3–4 倍，75/75 接近平凡。",
+      "verdict": "需限定",
+      "note": "README.md:67「五条结论在 25–75 个参数组合下全部成立」**在当前代码下不成立**：P2 是 24/25。P1 稳健成立（确定性）；P4/P5 在更换 seed 数后仍成立（但 P5 阈值过松、信息量低）。P2/P3 的稳健性既对 seed 数敏感，也在默认参数重跑中直接翻转。文档未声明种子数（见 E-01、E-02）。"
+    },
+    {
+      "claim": "可约性实验：ODE 对自生成数据 R²=1.00000、对 ABM 数据 0.38–0.90",
+      "source": "README.md:70-72；docs/研究设计.md:235-237",
+      "recomputed": "自生成侧：用 wellbeing_balance 以真参数 [1.0,0.5,0.4,0.2,0.5]、y0=[0.4,0.3] 生成 30/72/144/241 点轨迹，再用同一 make_fitter('wellbeing') 拟合 —— 四个窗口 R² 均为 1.0；拟合出的 p=income=0.7071，乘积 0.5 恰等于真值乘积（p 与 income 严格不可辨识，见 E-07）。ABM 侧：以脚本默认参数（seed=42、240 步）重跑：C0/C1/C2/C3 全窗口 R² = 0.769119 / 0.517751 / 0.383203 / 0.897597；存储 JSON 为 0.765218 / 0.674070 / 0.377988 / 0.895064 —— 前两者 DIFF（**C1 由 0.674 掉到 0.518，差 0.156**），后两者接近。全部落点仍在声称的 0.38–0.90 内。噪声地板：同条件跨 seed 逐点 sd 为 C0 0.01085 / C1 0.01599 / C2 0.01236 / C3 0.01251；而 ODE 拟合残差 rms 为 0.01954 / 0.03607 / 0.03269 / 0.01575，是跨 seed 波动的 1.26–2.64 倍。2 参数线性趋势在 C2 上已达 R²=0.6914、3 次多项式达 0.9265，均不低于 ODE 的 0.383。",
+      "verdict": "需限定",
+      "note": "「自生成 R²=1.0」「ABM 0.38–0.90」两个数字可复现（区间仍成立），但具体值同样过时（C1 差 0.156）。支撑「差距来自结构错配而非机制效应」的关键论证（研究设计.md:237 称残差「远低于智能体自身的随机波动所能解释的水平」）**从未被测量**，而我测到的方向与该措辞相反（残差 > 波动）。该实验另有单 seed（seed=42）、无重复、in-sample 拟合后下强结论等弱点（见 E-06、E-07）。"
+    },
+    {
+      "claim": "tools/baseline.py：同一 seed 两次运行产物逐字节相同",
+      "source": "tools/baseline.py:1-19；README.md:23,303；docs/研究设计.md:312；tests/test_reproducibility.py",
+      "recomputed": "两次独立进程运行 `python -X utf8 tools/baseline.py --out <A>` 与 `--out <B>`：两文件均 3591 字节，SHA256 完全相同（353d07110dd0967b1cd09b3c…），Python bytes 级比较 A==B 为 True。`--check` 对工作树锚点返回 exit 0。附加事实：版本控制的锚点 baseline/default_seed42.json 在工作树中处于**已修改（dirty）**状态（git diff --stat = 17 insertions/17 deletions；工作树 3444 B / sha f6f040ba…，HEAD blob 3445 B / sha 571a13fb…，两者不同）；当前代码新鲜输出 3591 B 与工作树锚点的**解析后语义完全相同**（97 个叶键，差异 0 个），但字节不同。",
+      "verdict": "成立",
+      "note": "同 seed 逐字节可复现成立（0.2.0 引入 Simulation(seed=) 独立 RNG 后的性质，本轮实测确认）。但该护栏当前失效：锚点是 dirty 的，--check 是在和「当前工作树自己已改过的锚点」比较，因此无法充当 tools/baseline.py 注释所声称的「改动即暴露」护栏（见 E-09）。注：我曾用 git show 取 HEAD 版锚点做 --check，因 PowerShell 重定向写入 UTF-8 BOM 而报 JSONDecodeError，那是我探针的缺陷，未计入本条判定。"
+    },
+    {
+      "claim": "机制验证四张图的 PNG 与 JSON 一致；EN_LABELS 映射无错位",
+      "source": "experiments/mechanism_validation.py:63-71,514-586；experiments/life_stage_reducibility.py:107-114,327-371",
+      "recomputed": "三个 PNG 与对应 JSON 的 mtime 完全相同（均 2026-10-11 16:00:51，同一 run 内先写 JSON 后写 PNG）。像素级校验 mechanism_validation.png 第三面板（E3 剂量-反应）：定位 6 个 marker 中心（x=327,386,445,505,564,623），读取像素 y=425/411/401/395/373/350（strength 0.5..16）；与 JSON 的 mean_abs_deviation 建立线性映射 y=489.23-1470.8·dev，预测值与实测最大偏差 **0.54 px**，corr(-pixel_y, JSON dev)=0.99995，像素 y 单调不增 → 图确实由该 JSON 绘出。EN_LABELS：life_stage_reducibility 的 6 个键覆盖 plot 实际使用的全部标签（4 个条件 + 2 个窗口，all mapped=True）；mechanism_validation 的 STAGE_EN 覆盖 ERIKSON_STAGES 全部 7 个阶段名（含「婴儿期」→infancy），无缺失、无错位。",
+      "verdict": "成立",
+      "note": "图与 JSON 内部一致，本文明确不是问题所在。但「内部一致」与「对当前代码正确」是两件事：这些图/JSON 与当前代码重跑结果不符（见 E-01），即图与数据同属一份过时产物。另注 matplotlib DejaVu Sans 无 CJK 字形，两脚本用英文标签是对的。"
+    }
+  ],
+  "findings": [
+    {
+      "id": "E-01",
+      "severity": "P1",
+      "title": "版本控制的三份实验结果文件全部与当前代码不一致：README 与设计文档引用的每一个随机性数字都不是当前代码能产出的；且 P2 的「25/25 稳健」在默认参数重跑中直接变为 24/25",
+      "evidence": "以各脚本**默认参数**重跑当前工作树代码到 TEMP，与 experiments/results/*.json 逐字段比较：\n(1) mechanism_validation.py（--seeds 6 默认）：E1 确定性部分逐位相同（max jump 2.4999999999941735e-05 完全一致），但所有随机量 DIFF —— E2 observed_ratio 四段 1.128207→1.139129 / 0.833443→0.837884 / 0.026387→0.026102 / 0.016709→0.015101；E3 SNR 4.8084→4.6223 / 4.5762→4.4070 / 4.4004→4.2417 / 3.731→3.5795 / 0.2762→0.2740 / 0.3368→0.3368；E3 触界 50.11%→49.11%；E4 童年 SNR 3.7422→3.6074、成年 SNR 3.5309→3.1171、decay 0.0669→0.0659。\n(2) sensitivity_analysis.py（--seeds 3 默认，与存储 JSON 相同 CLI）：**P2 tally 由 25/25 变为 24/25，verdict robust 由 True 变为 False**；其余 P1/P3/P4/P5 tally 不变；逐格 P2 判定 24/25 相同、1 格翻转。\n(3) life_stage_reducibility.py（seed=42、240 步默认）：C0/C1/C2/C3 全窗口 R² 由 0.765218/0.674070/0.377988/0.895064 变为 0.769119/**0.517751**/0.383203/0.897597（C1 差 0.156）。\n三份 JSON 的 PNG 与 JSON 内部一致（像素级校验通过，mtime 相同），说明「过时」是整份产物级别，不是图与数据脱节。README.md:58-72 与 docs/研究设计.md:158-237 的所有数字均取自这些过时文件。",
+      "impact": "直接冲击本轮的核心问题「主张与证据是否一致」：项目对外声称的具体数字（E2 效力比序列、E3 信噪比 3.7–4.8、E4 信噪比 3.74/3.53 与 6.7%、可约性 C1 的 0.674、以及「五条结论 25/25 或 75/75 全部成立」）**无法由当前代码复现**。最严重的一条是 P2：README.md:67「五条结论在 25–75 个参数组合下全部成立」在当前代码下是假的（P2 = 24/25），而该句正是敏感性分析这一节的总结论。因为 E1 与确定性量能逐位复现、随机量整体偏移，可判断是仿真随机流/机制实现变更后未重新固化结果（且没有测试锁定这些数值），属静默漂移。",
+      "minimal_fix": "用当前代码重新生成 experiments/results/*.json 与 *.png，并更新 README.md / docs/研究设计.md 中所有引用数字（或至少加注「本数字由 <commit> 生成」）；在 tests/ 中加一条「重跑实验脚本并与结果文件比对」的回归测试（例如对 E3 SNR 与 P2 tally 设容差断言），把这类漂移变成 CI 可见的失败；README.md:67 的「全部成立」改为实测 tally。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-02",
+      "severity": "P1",
+      "title": "E3/E4 信噪比随种子数系统性变化，而文档从不声明种子数：具体 SNR 数值不由所给证据唯一支持",
+      "evidence": "mechanism_validation.json 记录 seeds=[1000..1005]（6 个），sensitivity_analysis.json 记录 seeds=[1000,1001,1002]（3 个）；README.md:60/61/67 与 docs 表2/表3/表4 给出具体 SNR 与 tally，**三处均未说明种子数**。同一脚本同一参数、仅改 seed 数实测：E3 无钳位区 SNR 区间 seeds=2→[7.20,8.94]、3→[4.87,5.89]、6→[3.58,4.62]、12→[3.37,4.33]；E4 童年 SNR 1.25e11(1)/7.45(2)/4.91(3)/3.61(6)/3.40(12)、成年 SNR 1.04e10(1)/4.53(2)/4.20(3)/3.12(6)/2.92(12)。根因：mechanism_validation.py:302 用 np.std(axis=0)（ddof=0）的**跨 seed** 标准差作配对噪声；n=1 时恒为 0（实测 seeds=[1000] 时 SNR=4.996e10），n 小时系统性低估方差 → SNR 系统性高估。",
+      "impact": "读者按默认参数复跑会得到与表2/表3 不同的 SNR；用更大集成会更低。文档把「特定规模集成 + 向下偏噪声估计」的读数当作机制的稳定属性对外陈述，定量的「信噪比 3.7–4.8」在 12 种子时下界已跌到 3.37。",
+      "minimal_fix": "在 README 与 docs 的每个实验数字旁显式标注 `--seeds N`；把 paired_noise 改为无偏估计（ddof=1）或 bootstrap 方差；报告 SNR 随 seed 数的收敛曲线而不是单点值。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-03",
+      "severity": "P2",
+      "title": "E1 的「阶段边界跳变 2.5e-05」是探针宽度伪影，真实不连续量为 0",
+      "evidence": "mechanism_validation.py:130-133 与 sensitivity_analysis.py:74-81 都用 susceptibility(b-1e-4) 与 susceptibility(b+1e-4) 之差定义 jump。过渡为半宽 1.0 年的线性斜坡（influence.py:41-42,113-118），故该差 = 斜率×2e-4。用 b±1e-9 探针实测跳变 1.0e-10 / 1.0e-10 / 2.5e-10 / 2.2e-10 / 1.3e-10 / 5.0e-11，随探针宽度线性趋 0 → 函数处处连续；2.5e-05 正对应 slope 0.25 × 1e-4。",
+      "impact": "数值对结论无害（连续成立），但「跳变 2.5×10⁻⁵」会被读者当成真实间断幅度并固化进文档与测试，掩盖真实性质（C0 分段线性、处处连续）。",
+      "minimal_fix": "报告为「边界连续性检验：max|Δsusceptibility| @ ±δ = 2.5e-05（δ=1e-4，随 δ→0 线性趋 0，即连续）」，或改报一阶差分有界性。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-04",
+      "severity": "P2",
+      "title": "E2「效力比随发展阶段单调递减」在早期两阶段不可分辨，且判据容忍 5% 上升",
+      "evidence": "docs:171 称逐段单调递减。按 seed 求比再平均（6 种子）：学前期 1.6500±0.3488、学龄期 0.8068±0.1683、青春期 0.0148±0.0010、成年早期 0.0073±0.0062；前两阶段的 seed 间 sd 与两阶段差值同量级。判据 mechanism_validation.py:254 = `all(b <= a*1.05+1e-9)`，允许 5% 上升；敏感性网格中确实出现在容忍带内但实际上升的序列（如 seeds=3、shift=0.0/scale=1.15 的 [1.5171, 1.6169, …] 上升 6.6% 直接判失败）。",
+      "impact": "「单调递减」暗示逐段都有信号，实际是「易感性跌破 0.5 后实际效力断崖式下降」这一更强的非线性结论；且判据的 5% 容忍带使 pass/fail 在噪声下不稳定（与 E-01/E-02 的 P2 翻转同源）。",
+      "minimal_fix": "改写为「效力比在学龄期→青春期断崖下降（0.83→0.026）；前两阶段在 seed 噪声内不可分辨」；表1 加 seed 间标准差；判据改为带误差的统计比较。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-05",
+      "severity": "P2",
+      "title": "「可信强度上限=4」是阈值与网格产物而非数据定位；敏感性分析的 8.0 端点是网格伪影，且与 README 的全局断言冲突",
+      "evidence": "(a) CLAMP_LIMIT=0.01（sensitivity_analysis.py:61）无推导；实测触界比例在 strength≤4 时精确为 0.0000、strength=8 时 0.4911，故阈值在 0.001–0.49 内任取都得 bound=4，结论对阈值不敏感但对**网格**敏感：网格 {0,0.5,1,2,4,8,16} 在 4 与 8 之间无采样点，无法排除 5–7 已开始触界。代码注释（mechanism_validation.py:305）自己写「实测 strength≥8 时近半帧触界」，即边界在 4 与 8 之间。(b) sensitivity 的强度网格上限设为 8（sensitivity_analysis.py:110），故「可信强度上限 2.0–8.0」的 8.0 恰是网格端点，4 个格点（shift∈{-3,-2}, scale∈{0.7,0.85}）给出 8.0，无法区分「8 仍可信」与「扫描到此为止」。(c) README.md:60 仍无条件写「可信强度上限为 4」，与同一份 sensitivity 数据在部分格点给出 8.0 冲突。",
+      "impact": "读者会把「4」当成机制普适常数；实际它同时依赖默认参数、触界阈值与网格分辨率。docs 第7节已承认「任何具体的定量门槛都必须附带参数条件」，README 摘要句未加该限定。",
+      "minimal_fix": "在 4 与 8 之间加密采样（5/6/7）以真正定位；把「上限」改写为「在给定网格上首个触界强度为 8，故安全区 ≤4」；README 摘要句加参数条件；披露 CLAMP_LIMIT 及其不敏感性实测。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-06",
+      "severity": "P2",
+      "title": "可约性实验用单 seed（seed=42）、无重复、无噪声地板，且 in-sample 拟合后据 R² 下正文级结论",
+      "evidence": "life_stage_reducibility.py:62 `SEED = 42`，全文无种子循环。fit_reducibility（:204-223）在同一份聚合轨迹上拟合并直接报告 summary['r_squared']，无留出/无重复/无零模型对照。实测：同条件跨 seed 逐点 sd 为 C0 0.01085/C1 0.01599/C2 0.01236/C3 0.01251；ODE 残差 rms 0.01954/0.03607/0.03269/0.01575，是跨 seed 波动的 1.26–2.64 倍，**大于**研究设计.md:237 所称「远低于智能体自身的随机波动所能解释的水平」；2 参数线性趋势在 C2 已达 R²=0.6914、3 次多项式 0.9265，均不低于 ODE 的 0.383。重跑还显示 C1 全窗口 R² 由存储的 0.674 掉到 0.518（见 E-01）。",
+      "impact": "「含有时变影响系数的家庭动力学不能被单一常系数 ODE 刻画」（研究设计.md:241）建立在一个单 seed、in-sample、且被更简单基线反超的 R² 上；核心论证（残差 vs 随机波动）无测量支持且方向相反。",
+      "minimal_fix": "每个消融条件跑 ≥10 seed 并报告 R² 分布；加入零模型/基线对照（常值、线性趋势、同参数自生成 ODE）与留出段 R²；删除或替换「远低于随机波动」的措辞。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-07",
+      "severity": "P3",
+      "title": "可约性实验所用 wellbeing 模型自身含严格不可辨识参数对，却被用来给「不可约性」定量",
+      "evidence": "make_fitter('wellbeing') 含 p 与 income，而 lanchester.py:52 中二者仅以 p*income 出现（严格不可辨识，见 audits/fitting_niche.md 与 audits/verification.md V2）。我用该模型回拟自生成数据得 p=income=0.7071（真值乘积 0.5），即单参数无意义、乘积正确，5 维参数空间只有 4 个有效方向。",
+      "impact": "用参数冗余的代理模型论证「目标系统不可被该模型类概括」，使 R² 比较缺少可解释性（拟合会在不可辨识方向漂移）。结论方向仍站得住，但削弱该节论证强度。",
+      "minimal_fix": "拟合时固定 income=1.0 或重参数化为乘积，并说明代理模型的有效参数个数；顺带报告参数是否贴上界（fitter 的 r_squared 会被 max(0,·) 截断）。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-08",
+      "severity": "P3",
+      "title": "E1 / 敏感性 P1 从不检查最年幼阶段（0–1 岁），阶段覆盖不完整",
+      "evidence": "mechanism_validation.py:117-118 与 sensitivity 的 plateaus 循环用 `if end - start < 2: continue` 跳过宽度不足 2 年的阶段，ERIKSON_STAGES 第一段 (0.0,1.0,0.95) 因此被跳过；实测 plateaus 只输出 6 段（幼儿期起），文档表1 亦从学前期起。",
+      "impact": "「各阶段内部的取值与理论设定完全一致」（研究设计.md:158）对 7 段中的第 1 段未验证，而该段恰是最高易感性值 0.95。影响很小（0.95 是直接查表常量），但措辞过头。",
+      "minimal_fix": "改为也检查宽度不足 2 年的阶段（取其起点或中点值），或在文档中说明首段不参与逐段核验。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-09",
+      "severity": "P3",
+      "title": "版本控制的基线锚点已 dirty，使 tools/baseline.py --check 的「改动即暴露」护栏失效",
+      "evidence": "git status 显示 ` M baseline/default_seed42.json`；git diff --stat = 17 insertions/17 deletions；工作树 3444 B（sha f6f040ba…）≠ HEAD blob 3445 B（sha 571a13fb…）。当前代码新鲜输出 3591 B，其解析后语义与工作树锚点完全相同（97 叶键 0 差异），但与 HEAD 锚点已不同。",
+      "impact": "tools/baseline.py 的定位是「任何校准/结构改动后用 --check 把不可见的行为变化显式暴露」；锚点处于已改状态时，--check 实际是在和当前代码自己的产物比较，护栏形同虚设，而 README:23/303 与 docs:312 都把可复现性作为卖点。",
+      "minimal_fix": "按 tools/baseline.py:16-17 的流程把锚点从当前代码重新固化并提交（在提交信息说明），或在 CI 中断言锚点未被修改。",
+      "confidence": "high"
+    },
+    {
+      "id": "E-10",
+      "severity": "P3",
+      "title": "P5 稳健性判据过松（SNR>1，实测 3–4 倍富余），75/75 信息量接近平凡",
+      "evidence": "mechanism_validation.py:395 `persists_into_adulthood = adulthood['snr'] > 1.0`；sensitivity_analysis.py:131 直接复用该布尔量。实测成年 SNR 在全部测试配置下为 2.9–4.5（seeds=12 时 2.92），阈值 1.0，余量 3 倍以上。",
+      "impact": "docs 表4 把 P5 的 75/75 与其他四条并列作为稳健性证据，读者会高估该检验判别力。",
+      "minimal_fix": "改为与观测尺度相关的判据（如 SNR>2 并报告分布）或对衰减比是否显著大于 0 做统计检验，并在表中标注阈值。",
+      "confidence": "medium"
+    }
+  ],
+  "summary": {
+    "verdict_counts": {"成立": 3, "需限定": 5, "不成立": 0},
+    "established": [
+      "E1 单调性违例 0 次（确定性，与 seed 无关，且重跑逐位复现，是本报告最扎实一条）",
+      "tools/baseline.py 同 seed 两次运行产物逐字节相同（3591 B、SHA256 一致）",
+      "PNG 与 JSON 内部一致（像素级：线性映射最大偏差 0.54 px，corr=0.99995）、EN_LABELS 无错位/无漏映射"
+    ],
+    "qualified": [
+      "E2 效力比序列：定性结论只在学龄期→青春期成立；且文档数字来自过时结果文件，当前代码重跑为 1.139/0.838/0.0261/0.0151",
+      "E3：「单调 + strength≥8 触界」成立，但 SNR 3.7–4.8 既非当前代码输出（3.58–4.62）也未声明 seed 数（12 种子降至 3.37–4.33），配对噪声 ddof=0 系统性高估 SNR",
+      "E4：结论与衰减比 6.7% 成立（衰减比对 seed 数不敏感 0.064–0.083），但 SNR 3.74/3.53 过时且未声明 seed 数（当前 3.61/3.12）",
+      "敏感性分析：P1/P4/P5 稳健，但 README「五条全部成立」不成立 —— P2 在默认参数重跑下为 24/25（seeds=6 时仅 19/25）",
+      "可约性：区间 0.38–0.90 成立，但具体值过时（C1 由 0.674 掉到 0.518），「残差远低于随机波动」未测量且我实测方向相反，另有单 seed / in-sample 缺陷"
+    ],
+    "severity_counts": {"P1": 2, "P2": 4, "P3": 4},
+    "overall_assessment": "项目对外的**定性**结论在本轮独立复算中基本站得住：易感性阶段阶梯存在且连续；阶段易感性走低使实际效力断崖式下降；影响强度越界后因状态钳位而失稳；早期影响在成年后仍可分辨但大幅衰减；单一常系数 ODE 难以刻画家庭聚合动力学；同 seed 逐字节可复现。但**主张与证据的一致性存在系统性缺口**，核心有两点：(1) experiments/results/ 下三份结果文件（及其 PNG）是与当前代码不符的过时产物，README 与设计文档引用的所有随机性数字都无法由当前代码复现，其中 README:67「五条结论 25–75 组合全部成立」在默认参数重跑中直接变为 P2 24/25 —— 这是可直接判为「声称的结论不被数据支持」的一条；(2) 即使忽略过时问题，具体定量声称（SNR 区间、可信强度上限 4、25/25 稳健）也未声明 seed 数或网格，而它们对这些设置敏感。因此判断：**项目的定性叙事可信，具体数字与「稳健」结论当前不可信**，发布前应重固化结果并补齐 seed 数/误差带声明。",
+    "evidence_consistency_verdict": "部分可信 —— 定性结论有证据支撑；定量声称需重算并附条件。"
+  },
+  "unverified_or_open": [
+    "E3 的 strength=5/6/7 未采样，无法判定「上限=4」是保守下界还是精确定位；本条只断言 4 与 8 之间无采样点、边界未定位。",
+    "可约性「远低于随机波动」若改用其他噪声定义（残差自相关、bootstrap 置信带、组内方差）是否可能成立未穷尽；本条只给出跨 seed 逐点 sd 一种地板。",
+    "过时产物与当前代码差异的**根因**未定位到具体 commit：仅从「确定性量逐位复现、随机量整体偏移」推断是仿真随机流或影响机制实现变更后未重固化（family_abm/{core/environment,family/family_member}.py 在工作树即为已修改状态，是可疑来源之一），未做二分定位。",
+    "本轮未运行完整 pytest（任务要求以独立复算为主）；仅确认 tests/test_experiments.py 只验证 steps 参数贯通、不校验任何实验数值，故它无法防止 E-01 那类漂移。",
+    "工作树含未提交修改，审计基于工作树内容；若后续提交改变了 experiments/、family_abm/ 或 results/，本报告结论需按新 revision 重跑。"
+  ]
+}

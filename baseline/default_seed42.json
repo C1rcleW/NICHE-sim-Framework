@@ -14,10 +14,10 @@
           },
           "state_economic_pressure": {
             "max": 1.0,
-            "mean": 0.710997,
+            "mean": 0.70928,
             "min": 0.0,
             "n": 605,
-            "std": 0.088337
+            "std": 0.085811
           },
           "state_education": {
             "max": 0.677742,
@@ -35,10 +35,10 @@
           },
           "state_happiness": {
             "max": 0.667654,
-            "mean": 0.497554,
+            "mean": 0.499102,
             "min": 0.387312,
             "n": 605,
-            "std": 0.04871
+            "std": 0.049585
           },
           "state_health": {
             "max": 1.0,
@@ -49,10 +49,10 @@
           },
           "state_income": {
             "max": 0.131401,
-            "mean": 0.070814,
+            "mean": 0.071243,
             "min": 0.0,
             "n": 605,
-            "std": 0.057968
+            "std": 0.057925
           },
           "state_influence": {
             "max": 0.8,
@@ -62,18 +62,18 @@
             "std": 0.266549
           },
           "state_influence_received": {
-            "max": 0.095544,
-            "mean": 0.003178,
-            "min": -0.007729,
+            "max": 0.102662,
+            "mean": 0.00327,
+            "min": -0.007821,
             "n": 605,
-            "std": 0.00729
+            "std": 0.007567
           },
           "state_stress": {
-            "max": 0.714724,
-            "mean": 0.530306,
+            "max": 0.714708,
+            "mean": 0.53008,
             "min": 0.171735,
             "n": 605,
-            "std": 0.097058
+            "std": 0.097118
           },
           "state_susceptibility": {
             "max": 0.5,
@@ -96,10 +96,10 @@
           },
           "state_economic_pressure": {
             "max": 1.0,
-            "mean": 0.726672,
+            "mean": 0.725008,
             "min": 0.650819,
             "n": 240,
-            "std": 0.060416
+            "std": 0.057072
           },
           "state_housing_quality": {
             "max": 0.5,
@@ -131,10 +131,10 @@
           },
           "state_total_income": {
             "max": 0.261886,
-            "mean": 0.175461,
+            "mean": 0.176535,
             "min": 0.0,
             "n": 242,
-            "std": 0.070453
+            "std": 0.069475
           }
         },
         "rows": 242

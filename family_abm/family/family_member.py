@@ -72,6 +72,11 @@ class FamilyMember(Agent):
 
         Parameters
         ----------
+        role_name : str, optional
+            **家庭角色**（``parent``/``child``/``adult``/``elder``…），用于展示与
+            网络图，构造后**不会**被年龄覆盖。动力学（收入乘数、工作压力）使用
+            由 ``age`` 实时推导的**生命阶段**（preschool/child/student/adult/elder），
+            两者词表不同、互不读取。
         environment : Environment, optional
             所属环境。**传入后初始化随机数才来自该环境的 RNG**（即
             ``Simulation(seed=...)`` 注入的独立随机流）。
@@ -97,6 +102,12 @@ class FamilyMember(Agent):
         self.set_attribute("personality", personality or {
             k: max(0.0, min(1.0, rng.gauss(0.5, 0.15))) for k in PERSONALITY_DIMENSIONS
         })
+        # role = **家庭角色**（声明值，面向展示与网络图；UI 下拉框的
+        # parent/child/adult/elder）。动力学**不读它**：收入乘数与工作压力按
+        # 年龄推导的生命阶段计算（见 step()）。
+        # 回归：早先构造时直接写入 role_name，而 role_mul 的词表是生命阶段——
+        # 声明 "parent"（README/示例/UI 全都这么写）的成员第一步落进兜底乘数
+        # 0.2，第二步又被 age_increment 用年龄派生值**静默覆盖**，两头都错。
         self.set_attribute("role", role_name)
 
         self.set_state_value("health", max(0.3, min(1.0, 1.0 - age * 0.003 + rng.gauss(0, 0.05))))
@@ -158,15 +169,18 @@ class FamilyMember(Agent):
         else:           return "elder"
 
     def age_increment(self, years: float = 1 / 12) -> None:
+        """推进年龄。**不覆盖 role**——role 是声明的家庭角色，生命阶段由
+        step() 按当前年龄实时推导，不需要（也不应该）再存一份。"""
         new_age = self.get_attribute("age") + years
         self.set_attribute("age", new_age)
-        self.set_attribute("role", self._role_at_age(new_age))
 
     # ── Main step ────────────────────────────────────────────────────────
 
     def step(self) -> None:
         age = self.get_attribute("age")
-        role = self.get_attribute("role")
+        # 生命阶段由年龄实时推导（收入乘数、工作压力用它）。
+        # 唯一真源是 age，不读 role 属性——那是指定的家庭角色，两者词表不同。
+        stage = self._role_at_age(age)
         personality = self.get_attribute("personality")
         rng = self._rng().gauss
 
@@ -189,8 +203,10 @@ class FamilyMember(Agent):
         peak = self._p("income_age_peak", 45)
         spread = self._p("income_age_spread", 18)
         age_factor = math.exp(-((age - peak) ** 2) / (2 * spread ** 2))
+        # _role_at_age 的值域恰为下表 5 键：直接索引，词表一旦漂移就立刻报错，
+        # 而不是像旧实现那样静默落进 0.2 的兜底值。
         role_mul = {"preschool": 0.0, "child": 0.0, "student": 0.15,
-                    "adult": 1.0, "elder": 0.35}.get(role, 0.2)
+                    "adult": 1.0, "elder": 0.35}[stage]
         income = base * (1 + edu_boost) * age_factor * role_mul
         income += rng(0, noise * base)
         self.set_state_value("income", max(0.0, income))
@@ -218,7 +234,7 @@ class FamilyMember(Agent):
         # ── Stress (relaxes toward an equilibrium, scaled by neuroticism) ──
         st = self.get_state_value("stress")
         st_base = self._p("stress_base", 0.012)
-        st_work = self._p("stress_work_add", 0.008) if role in ("adult", "student") else 0.005
+        st_work = self._p("stress_work_add", 0.008) if stage in ("adult", "student") else 0.005
         st_decay = self._p("stress_decay", 0.06)
         neuro = personality.get("neuroticism", 0.5)
         neuro_sens = self._p("stress_neuro_sensitivity", 0.30)
