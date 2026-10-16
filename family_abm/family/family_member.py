@@ -168,11 +168,22 @@ class FamilyMember(Agent):
         elif age < 65:   return "adult"
         else:           return "elder"
 
-    def age_increment(self, years: float = 1 / 12) -> None:
-        """推进年龄。**不覆盖 role**——role 是声明的家庭角色，生命阶段由
-        step() 按当前年龄实时推导，不需要（也不应该）再存一份。"""
-        new_age = self.get_attribute("age") + years
-        self.set_attribute("age", new_age)
+    def advance_time(self) -> None:
+        """推进年龄（由调度器在每个时间步对**所有存活成员**调用）。
+
+        与 :meth:`step` 分离的原因：``step`` 的调用取决于调度器是否激活该成员
+        （``random_activation`` 只激活一部分），而**年龄不该取决于"这一步有没有
+        行动"**——时间对每个人都在流逝。若把本方法的内容留在 ``step`` 里，
+        未激活的成员年龄会停滞，同一仿真内不同成员的"生命时间"互不相同，
+        而记录的时间轴仍按 ``Environment.time`` 逐格递增，两者失去可比性，
+        以时间为轴的拟合与图表也就失去意义。
+
+        步长取 ``dt_months``（月），与 ``step()`` 内其它状态量的积分步长同一真源。
+        **不覆盖 role**——role 是声明的家庭角色，生命阶段由 ``step()`` 按当前
+        年龄实时推导，不需要（也不应该）再存一份。
+        """
+        dt_months = self._p("dt_months", 1.0)
+        self.set_attribute("age", self.get_attribute("age") + dt_months / 12)
 
     # ── Main step ────────────────────────────────────────────────────────
 
@@ -276,7 +287,8 @@ class FamilyMember(Agent):
             self.set_state_value("happiness", max(0.0, min(1.0, ha)))
 
         # ── Age ──
-        self.age_increment(years=dt_months / 12)
+        # 年龄不在这里推进：由调度器对**所有存活成员**调用 advance_time()，
+        # 使年龄与"本步是否被激活"无关。见 advance_time 的 docstring。
 
     def __repr__(self) -> str:
         return f"FamilyMember({self.get_attribute('name')}, age={self.get_attribute('age'):.1f}, role={self.get_attribute('role')})"

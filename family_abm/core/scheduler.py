@@ -36,6 +36,18 @@ class Scheduler:
             raise ValueError(f"Unknown scheduler method: {self.method}")
 
     def step(self, environment: Environment) -> None:
+        """推进一个时间步。
+
+        分两个互相独立的阶段：
+
+        1. **时间推进**：对*所有存活智能体*调用 ``advance_time()``。放在选择之前，
+           使"时间在谁身上流逝"不受本步激活集合影响——``random_activation``
+           只激活一部分智能体，但没被激活的人一样会变老。
+        2. **行动**：对调度选出的子集调用 ``step()``。
+        """
+        for agent in environment.get_agents():
+            if agent.alive:
+                agent.advance_time()
         for agent in self.schedule(environment):
             if agent.alive:
                 agent.step()

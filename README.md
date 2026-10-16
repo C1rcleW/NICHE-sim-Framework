@@ -315,10 +315,41 @@ hh.add_member(FamilyMember(name="Father", age=40, environment=env))
 
 > **构造顺序与身份**：智能体在构造期间就会抽取随机数（人格、初始状态），因此要
 > 把 `environment=env` 传给 `Household` 与 `FamilyMember`，否则它们的初始化会
-> 退回全局 `random`。关系变量的随机流按 `(seed, 双方身份, 关系类型)` 派生，因此
-> 关系之间互不干扰、也不依赖迭代顺序；若需要跨运行复现关系初值，请给
-> `Household(household_id=...)` 与 `FamilyMember(agent_id=...)` 传稳定 id。
+> 退回全局 `random`。关系变量的随机流按
+> `(seed, 所属容器的环境内序号, 双方标签, 关系类型)` 派生，因此关系之间互不干扰、
+> 也不依赖迭代顺序；容器序号按构建顺序分配，同名家庭不会串流。若需要跨运行复现
+> 关系初值，请给 `FamilyMember(agent_id=...)` 传稳定 id。
 > Web 仪表板的 `/api/run` 同样接受 `seed` 字段（默认 42）。
+
+---
+
+## 时间与调度
+
+仿真把"时间流逝"与"谁行动"当作两件独立的事：
+
+| 概念 | 由谁负责 | 是否受调度器影响 |
+|---|---|---|
+| **时间流逝** | `Agent.advance_time()`，调度器对**每个存活智能体**调用 | 否——三种调度器下完全一致 |
+| **谁行动** | `Scheduler.schedule()` 选出的子集，调用其 `step()` | 是 |
+
+```python
+sim = Simulation(env, scheduler=Scheduler("random_activation"))
+```
+
+- **`sequential`**：按注册顺序，每步全部行动。
+- **`random`**：每步全部行动，顺序随机打乱。
+- **`random_activation`**：每步只激活**随机一部分**智能体（实测均值约为总数的一半）。
+
+关键保证：**年龄不会因为"这一步没被激活"而停滞**。`FamilyMember.advance_time()`
+按 `dt_months` 推进年龄，且由调度器对全体调用，因此：
+
+- 三种调度器下，N 步后每个成员的年龄增量都恰好是 `N/12` 年；
+- 记录的时间轴（月）与年龄推进（月）严格相等，以时间为轴的拟合与图表才有意义。
+
+> 如果年龄只在被激活时推进，`random_activation` 下 60 步（名义 5 年）后各成员
+> 只会长 2.0–2.7 岁，而且**每个人都不一样**——同一仿真内成员的"生命时间"彼此
+> 失同步。这是本项目曾存在的缺陷，现由
+> `tests/test_registration.py` 中的生命周期测试钉住。
 
 ---
 

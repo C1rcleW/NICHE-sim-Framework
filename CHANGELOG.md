@@ -6,6 +6,64 @@
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 `0.x` 阶段的次版本号可能包含不兼容改动。
 
+## [Unreleased]
+
+### 修正
+
+**时间与调度语义**
+
+- **年龄推进与调度激活解耦**。此前 `age_increment` 写在 `FamilyMember.step()` 末尾，
+  而 `step()` 只在被调度器激活时调用——`random_activation` 下未被激活的成员**连年龄
+  都停滞**：60 步（名义 5 年）后各成员只长了 2.0–2.7 岁，而且**每个人都不一样**，
+  同一仿真内成员的"生命时间"彼此失同步；记录的时间轴却仍按 `Environment.time`
+  逐格递增，以时间为轴的拟合与图表因此失去可比性。
+  现新增 `Agent.advance_time()`（默认空实现，`FamilyMember` 覆写为按 `dt_months`
+  推进年龄），由调度器在**选择激活子集之前**对每个存活智能体调用。修复后三种
+  调度器下 N 步的年龄增量都恰好是 `N/12` 年，且时间轴与年龄推进严格相等。
+  附带影响：`sequential`/`random` 会激活全部智能体，其行为不变，仅年龄时序前移
+  一个月（状态统计量的漂移约 1e-4 量级），基线已相应重固化。
+
+**可复现性**
+
+- `influence.py` 去掉 `float(x.get(k, d) or d)` 的 `or` 零值兜底：它会把显式设为 0
+  的参数静默改写回默认值——`susceptibility_scale=0`（完全关闭易感性的消融条件）
+  被改成 1.0，来源 `health=0` 被 `or 1.0` 当作满血使能量约束失效。
+- 关系随机流的派生元组由 `(seed, 双方身份, 关系类型)` 改为
+  `(seed, 所属容器的环境内序号, 双方标签, 关系类型)`：原名只用家庭显示名，导致
+  **同名家庭（含默认名）拿到完全相同的随机流**，跨家庭状态系统性相关、污染家庭
+  层面的方差分析；同时 `relation_type` 此前并未真正参与派生（与 docstring 不符）。
+- `Environment.add_agent()` 收养容器型智能体已持有的成员，`remove_agent()` 对称注销。
+  此前成员若在家庭注册前 `add_member()`，会**静默地永不步进**（年龄不变、状态冻结）
+  且无任何报错。
+
+**语义正确性**
+
+- `FamilyMember` 分离"声明的家庭角色"与"按年龄推导的生命阶段"：`role_name`
+  （`parent`/`child`/…，UI 与文档的词表）此前被直接置入 `role`，而收入乘数的词表是
+  生命阶段（`preschool`/`child`/…），声明 `"parent"` 的成员第一步落进 `.get(role, 0.2)`
+  兜底乘数、第二步又被年龄派生值静默覆盖。现 `role` 仅作声明值，动力学按 `age`
+  实时推导阶段，且改为**直接索引**——词表漂移会立刻报错而非静默兜底。
+- `FeatureExtractor.extract_features()` 不再用 0 填充缺失。宽表中的 `NaN` 表示
+  "该 agent 类型没有这个状态"（`Household` 无 `state_happiness`，`FamilyMember` 无
+  `state_total_income`），`fillna(0)` 把"不存在"伪造成真实观测：实测 847 条标签中
+  247 条（29.16%）是伪造的 0，且全部是"没有下一步"的行。现按完整案例过滤，
+  X/y 用同一掩码对齐，滞后目标尾部同样丢弃。
+- `Household.add_member()` 在家庭尚未接入环境时退回**成员自己的** `environment`
+  取随机流，避免退回全局 `random` 而破坏带 seed 的可复现性。
+
+### 新增
+
+- `Agent.advance_time()`：智能体自身的"生命时间"推进契约，与 `step()` 的激活选择独立。
+- 测试：`tests/test_registration.py` 新增 5 项生命周期用例（年龄增量在三种调度器下
+  一致、时间轴与年龄推进相等、无生命周期智能体继承空实现不报错）；
+  `test_features_nan.py`（缺失值不再填 0）、`test_experiments.py`
+  （实验函数尊重 `--steps`）、`test_examples_smoke.py`（示例可跑）；
+  `test_influence.py` / `test_simulation_and_fitting.py` 新增 9 项。
+  测试总数 108 → 141。
+- `experiments/mechanism_validation.py` 与 `sensitivity_analysis.py` 的
+  `e2`/`e3`/`e4` 及敏感性函数接受 `steps` 参数，可经 `--steps` 覆盖
+  （含 `MIN_STEPS_FOR_STAGE_COVERAGE` 守卫），便于快速复算。
+
 ## [0.1.0] — 首个公开版本
 
 首个公开发布。此前仓库内的 `0.2.0` 是开发期版本号，从未对外发布；

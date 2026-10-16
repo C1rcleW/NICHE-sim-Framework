@@ -9,6 +9,10 @@
 1. 两种构建顺序都必须让成员真正步进；
 2. 两种构建顺序必须产生**逐点一致**的结果——否则"修好了能跑"却引入了
    第二种隐式语义，可复现性承诺就形同虚设。
+
+另含**生命周期时间**的回归（见文件末尾）：年龄推进必须与调度器的激活选择
+解耦——否则 ``random_activation`` 下未被激活的成员年龄停滞，同一仿真内
+不同成员的"生命时间"互不相同，而记录的时间轴仍逐格递增。
 """
 from __future__ import annotations
 
@@ -95,3 +99,105 @@ def test_remove_member_still_works_in_isolation() -> None:
     assert victim.id not in env.agents
     assert victim.id not in hh.members
     assert members[1].id in env.agents, "移除一个成员不应波及其它成员"
+
+
+# ── 生命周期时间：年龄推进与调度激活解耦 ────────────────────────────────
+
+
+def _ages_by_name(env):
+    return {
+        a.get_attribute("name"): a.get_attribute("age")
+        for a in env.get_agents()
+        if isinstance(a, FamilyMember)
+    }
+
+
+def _build_ages(method: str, steps: int, seed: int = 42):
+    """构建一个家庭并跑指定调度器，返回 (初始年龄表, 结束年龄表)。"""
+    env = Environment()
+    sim = Simulation(env, scheduler=Scheduler(method), seed=seed)
+    hh = Household(name="Smith", environment=env)
+    env.add_agent(hh)
+    hh.add_member(FamilyMember(name="Father", age=40, role_name="parent",
+                               agent_id="father", environment=env))
+    hh.add_member(FamilyMember(name="Child", age=6, role_name="child",
+                               agent_id="child", environment=env))
+    before = _ages_by_name(env)
+    sim.run(steps)
+    return before, _ages_by_name(env)
+
+
+def test_age_advances_for_every_living_member_under_random_activation() -> None:
+    """``random_activation`` 只激活部分智能体，但**所有人都必须变老**。
+
+    修复前年龄在 ``FamilyMember.step()`` 末尾推进，而 step 只在被激活时调用，
+    于是 60 步（名义 5 年）后各成员只长了约 2.0–2.7 岁，且**彼此不同**。
+    """
+    steps = 60
+    before, after = _build_ages("random_activation", steps)
+    for name, start in before.items():
+        gain = after[name] - start
+        assert abs(gain - steps / 12) < 1e-9, (
+            f"{name} 的年龄增量 {gain:.4f} 年 != {steps / 12:.4f} 年"
+            "——年龄推进仍取决于本步是否被激活"
+        )
+
+
+def test_age_gain_is_identical_across_schedulers() -> None:
+    """三种调度器下年龄增量必须完全一致：时间流逝不该随调度方式改变。"""
+    steps = 60
+    expected = steps / 12
+    gains = {}
+    for method in ("sequential", "random", "random_activation"):
+        before, after = _build_ages(method, steps)
+        gains[method] = {name: after[name] - before[name] for name in before}
+        for name, gain in gains[method].items():
+            assert abs(gain - expected) < 1e-9, f"[{method}] {name} 年龄增量 {gain:.6f} != {expected:.6f}"
+    assert gains["sequential"] == gains["random_activation"], (
+        "不同调度器下年龄增量不同——成员间的生命时间不再同步"
+    )
+
+
+def test_sequential_scheduler_regression_guard() -> None:
+    """``sequential`` 与 ``random`` 会激活全部智能体，年龄增量必须**逐位相同**。
+
+    这条锁住一个易犯的错误：把 ``advance_time()`` 误放进"被激活才调用"的分支。
+    只要两者出现任何差异，就说明时间推进又被耦合回了激活选择。
+    """
+    seq = _build_ages("sequential", 24)
+    rnd = _build_ages("random", 24)
+    seq_gain = {n: seq[1][n] - seq[0][n] for n in seq[0]}
+    rnd_gain = {n: rnd[1][n] - rnd[0][n] for n in rnd[0]}
+    assert seq_gain == rnd_gain, f"sequential 与 random 的年龄增量不同：{seq_gain} vs {rnd_gain}"
+
+
+def test_simulation_time_axis_matches_age_progress() -> None:
+    """记录的时间轴（月）必须等于年龄推进（月），否则以时间为轴的拟合失去意义。"""
+    steps = 36
+    env = Environment()
+    sim = Simulation(env, scheduler=Scheduler("random_activation"), seed=7)
+    hh = Household(name="Smith", environment=env)
+    env.add_agent(hh)
+    hh.add_member(FamilyMember(name="Child", age=6, role_name="child",
+                               agent_id="child", environment=env))
+    before = _ages_by_name(env)["Child"]
+    recorder = StateRecorder(record_agents=True)
+    sim.add_recorder(recorder)
+    sim.run(steps)
+    df = recorder.to_dataframe()
+    child = df[df["attr_name"] == "Child"].sort_values("time")
+    last_time = float(child["time"].iloc[-1])
+    age_gain_months = (_ages_by_name(env)["Child"] - before) * 12
+    assert abs(age_gain_months - last_time) < 1e-9, (
+        f"时间轴 {last_time} 个月 != 年龄推进 {age_gain_months:.6f} 个月"
+    )
+
+
+def test_advance_time_is_noop_for_agents_without_lifecycle() -> None:
+    """没有生命周期语义的智能体（如 Household）继承空实现，不因新契约报错。"""
+    env = Environment()
+    sim = Simulation(env, scheduler=Scheduler("sequential"), seed=42)
+    hh = Household(name="Smith", environment=env)
+    env.add_agent(hh)
+    sim.run(5)  # 不应抛 NotImplementedError
+    assert hh.get_attribute("name") == "Smith"

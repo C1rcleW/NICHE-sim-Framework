@@ -99,6 +99,14 @@ class Environment:
         return [a for a in self.agents.values() if isinstance(a, agent_type)]
 
     def step(self) -> None:
+        """步进所有智能体一次（不经过 Scheduler 的直连入口）。
+
+        与 ``Scheduler.step`` 保持同一阶段语义：先对所有存活智能体推进时间，
+        再让它们行动。
+        """
+        for agent in self.get_agents():
+            if agent.alive:
+                agent.advance_time()
         for agent in self.get_agents():
             if agent.alive:
                 agent.step()
