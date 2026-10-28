@@ -66,6 +66,7 @@ dependencies = [
 # ruff 钉住版本：其默认规则集会随版本变化，浮动安装会让本地与 CI 结果不一致
 dev = ["pytest>=7.0", "build>=0.10", "httpx>=0.24", "python-docx>=1.0", "ruff==0.17.0"]
 viz = ["networkx>=2.6"]
+e2e = ["playwright>=1.40"]
 
 [project.urls]
 Repository = "https://github.com/C1rcleW/NICHE-sim-Framework"
@@ -102,6 +103,7 @@ addopts = "-q"
 # （磁盘、杀毒软件、路径长度、pip 版本）。单独标记后可以在不同平台上选择性运行。
 markers = [
     "packaging: 需要 pip/build 的构建与安装测试（环境敏感）",
+    "browser: 需要 Playwright 与 Chromium 的真实浏览器测试；设置 RUN_BROWSER_TESTS=1 启用",
 ]
 
 # 显式列出包，避免把 tests/ 与 tools/ 一并装进 wheel

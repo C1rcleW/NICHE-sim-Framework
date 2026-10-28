@@ -29,6 +29,33 @@ jobs:
       - name: ruff
         run: ruff check family_abm tests tools experiments
 
+  frontend:
+    name: 前端行为与浏览器冒烟
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: 安装（含 e2e 依赖）
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,e2e]"
+      - name: 前端语法与行为测试
+        run: |
+          node --check family_abm/web/static/js/dashboard.js
+          node tools/check_dashboard_behavior.js
+      - name: 安装 Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: 真实浏览器冒烟
+        env:
+          RUN_BROWSER_TESTS: "1"
+          PYTHONUTF8: "1"
+        run: python -m pytest tests/test_browser_smoke.py -q
+
   test:
     name: 测试 (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
@@ -108,7 +135,7 @@ jobs:
     # "已发布产物通过了 CI"这一前提就不成立。
     if: startsWith(github.ref, 'refs/tags/v')
     name: 发布产物（打 tag 时触发）
-    needs: [lint, test, test-windows, package]
+    needs: [lint, frontend, test, test-windows, package]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -119,27 +146,45 @@ jobs:
           python-version: "3.12"
       - name: 构建 wheel 与 sdist
         run: |
-          python -m pip install --upgrade pip build
+          python -m pip install --upgrade pip build packaging
           python -m build
       - name: 校验产物版本号与 tag 一致
-        # tag 是 v0.1.0 而产物是 family_abm-0.2.0 这类不一致必须挡在这里，
-        # 否则会把版本号错误的产物发出去。
-        #
-        # 注意要去掉预发布后缀：PEP 440 允许 v0.2.0-rc.1 这样的 tag，
-        # 而构建产物名是 family_abm-0.2.0-rc.1...，其"版本部分"是 0.2.0。
-        # 若直接用完整 tag 匹配，预发布版本永远无法发布。
+        # 使用 PEP 440 解析版本，避免 0.1.1 误匹配 0.1.10，并正确处理 rc 标签。
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          VERSION="${VERSION%%-*}"
-          echo "tag=${GITHUB_REF_NAME}  比对版本=${VERSION}"
-          ls dist/
-          for f in dist/*; do
-            case "$(basename "$f")" in
-              *"$VERSION"*) ;;
-              *) echo "产物 $f 的版本号与 ${VERSION} 不一致"; exit 1 ;;
-            esac
-          done
-          echo "版本号校验通过：${VERSION}"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from packaging.version import InvalidVersion, Version
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          assert tag.startswith("v"), f"release tag 必须以 v 开头：{tag}"
+          try:
+              expected = Version(tag[1:])
+          except InvalidVersion as exc:
+              raise SystemExit(f"tag 不是合法 PEP 440 版本：{tag}") from exc
+
+          files = sorted(Path("dist").iterdir())
+          assert files, "dist/ 为空"
+          for path in files:
+              name = path.name
+              assert name.startswith("family_abm-"), f"非本项目产物：{name}"
+              tail = name[len("family_abm-"):]
+              if name.endswith(".tar.gz"):
+                  artifact_version = tail[:-len(".tar.gz")]
+              elif name.endswith(".whl"):
+                  artifact_version = tail.split("-", 1)[0]
+              else:
+                  raise SystemExit(f"未知产物类型：{name}")
+              try:
+                  parsed = Version(artifact_version)
+              except InvalidVersion as exc:
+                  raise SystemExit(f"产物版本无法解析：{name}") from exc
+              if parsed != expected:
+                  raise SystemExit(
+                      f"产物 {name} 的版本 {parsed} 与 tag {expected} 不一致"
+                  )
+              print(f"[OK] {name}: {parsed}")
+          PY
       - name: 附到 GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -4,7 +4,10 @@ import asyncio
 import functools
 import json
 import logging
+import math
 import os
+import threading
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
 from ..core.environment import Environment
 from ..core.scheduler import Scheduler
@@ -26,6 +29,16 @@ from ..fitting.fitter import make_fitter
 from ..fitting.lanchester import MODEL_REGISTRY, MODEL_STATE_NAMES
 from ..ml.recorder import StateRecorder
 from ..niche.micro_niche import MicroNiche
+from ..parameters import (
+    MAX_FAMILIES,
+    MAX_MEMBERS_PER_FAMILY,
+    MAX_STEPS,
+    MAX_TOTAL_MEMBERS,
+    PARAM_GROUPS,
+    PARAM_SPECS,
+    SIM_LIMITS,
+)
+from .run_store import RunSnapshot, RunStore, UnknownRunError
 
 HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(HERE / 'templates'))
@@ -116,32 +129,52 @@ def _load_fit_timeout_seconds() -> float:
 
 FIT_TIMEOUT_SECONDS = _load_fit_timeout_seconds()
 
-# ── Global simulation state ────────────────────────────────────────────────
-_sim_env: Environment | None = None
-_sim_df: pd.DataFrame | None = None
-_sim_recorder: StateRecorder | None = None
-_last_fitter = None
+# ── Run state and heavy-work slots ─────────────────────────────────────────
+_run_store = RunStore()
+_run_slot = threading.BoundedSemaphore(1)
+_fit_slot = threading.BoundedSemaphore(1)
+
+
+def _resolve_run(run_id: str | None) -> tuple[RunSnapshot | None, JSONResponse | None]:
+    try:
+        snapshot = _run_store.get(run_id or None)
+    except UnknownRunError as exc:
+        return None, JSONResponse({
+            'error': (
+                f'未知运行 {exc.run_id!r}。该结果可能已被新运行替换；'
+                '请重新运行仿真或使用当前 run_id。'
+            ),
+            'status': 'unknown_run',
+        }, 404)
+    if snapshot is None:
+        return None, JSONResponse({
+            'error': 'No simulation data. POST /api/run first.',
+            'status': 'no_simulation',
+        }, 400)
+    return snapshot, None
 
 # ── Pydantic models ────────────────────────────────────────────────────────
 
 class MemberConfig(BaseModel):
     """家庭成员输入。
 
-    **必须是类型化模型，不能用 `dict`**：`allow_inf_nan=False` 对 `dict`/`Any`
-    类型的字段**不递归生效**（实测 `age=NaN` 仍然通过），而 `json.loads` 默认
-    接受 `NaN`/`Infinity` 字面量。类型化之后 NaN 在校验层被拒（422），
-    而不是等到仿真跑完、/api/data 才以 500/400 暴露——错误离现场近得多。
-
-    `extra='allow'`：成员允许带额外属性（会进入 `FamilyMember.attributes`），
-    保持向后兼容；但已知字段的类型会被强校验。
+    只允许公开字段：任意额外键既不会参与动力学，又可能沿用 ``**kwargs``
+    进入智能体构造器，造成 500 或注入非预期状态列。未知字段在校验层直接拒绝。
     """
-    model_config = ConfigDict(allow_inf_nan=False, extra='allow')
+    model_config = ConfigDict(allow_inf_nan=False, extra='forbid')
 
     name: str
     age: float = 25.0
     gender: str = 'other'
     role_name: str = 'adult'
     personality: dict[str, float] | None = None
+
+    @field_validator('age', mode='before')
+    @classmethod
+    def _age_not_bool(cls, value: Any) -> Any:
+        if isinstance(value, bool):
+            raise ValueError(f'age 必须是数值，收到 {value!r}')
+        return value
 
     @field_validator('age')
     @classmethod
@@ -153,29 +186,23 @@ class MemberConfig(BaseModel):
 
 
 class FamilyConfig(BaseModel):
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='forbid')
 
     name: str
-    members: list[MemberConfig] = []
+    members: list[MemberConfig] = Field(default_factory=list)
 
 
 class SimConfig(BaseModel):
-    # allow_inf_nan=False：JSON 允许 NaN/Infinity 字面量（json.loads 默认接受），
-    # 此前 age=NaN 会被接受、在 10 步之后才表现为 /api/data 的 500/400，
-    # 错误离现场很远。这里在校验层直接拒绝。
+    # allow_inf_nan=False：JSON 允许 NaN/Infinity 字面量，输入层直接拒绝。
     model_config = ConfigDict(allow_inf_nan=False)
 
-    steps: int = 120
+    steps: StrictInt = Field(default=120, ge=0, le=MAX_STEPS)
     # 随机种子：给出后同一配置可复现（含智能体初始化）。
-    # 默认 42 而非 None，使 Web 端默认行为可复现。
-    seed: int | None = 42
-    # 动力学参数：必须是数值。此前是裸 dict，params.randomness="abc" 会一路传到
-    # 仿真内部才抛转换错误。
-    params: dict[str, float] = {}
-    # 默认值必须用模型构造：Pydantic v2 **不校验 default**，若这里写裸 dict，
-    # 请求未提供 families 时 `fam.name` 会抛 AttributeError（只在默认路径出现，
-    # 显式传 families 的请求反而正常——很容易漏测）。
-    families: list[FamilyConfig] = [
+    seed: StrictInt | None = 42
+    # 动力学参数：必须是数值，且键和范围由 PARAM_SPECS 统一约束。
+    params: dict[str, float] = Field(default_factory=dict)
+    # 默认值必须用模型构造：Pydantic v2 不校验裸默认值。
+    families: list[FamilyConfig] = Field(default_factory=lambda: [
         FamilyConfig(name='Smith', members=[
             MemberConfig(name='Father', age=40, gender='male', role_name='parent'),
             MemberConfig(name='Mother', age=38, gender='female', role_name='parent'),
@@ -185,29 +212,45 @@ class SimConfig(BaseModel):
             MemberConfig(name='Mom', age=35, gender='female', role_name='parent'),
             MemberConfig(name='Daughter', age=8, gender='female', role_name='child'),
         ]),
-    ]
+    ])
 
     @model_validator(mode='after')
     def _check_ranges(self) -> SimConfig:
-        """把"取值必然导致崩溃"的参数挡在校验层，返回 422 而不是 500。
+        """Reject unknown, out-of-range, or oversized inputs before simulation."""
+        unknown = sorted(set(self.params) - set(PARAM_SPECS))
+        if unknown:
+            raise ValueError(f'未知参数：{unknown}。可用参数：{sorted(PARAM_SPECS)}')
 
-        `income_age_spread` 在收入年龄曲线里做分母（`2 * spread ** 2`），
-        取 0 会抛 ZeroDivisionError——此前表现为 500 internal_error，
-        而它其实是**输入问题**，应当是 4xx。UI 上该输入框的 min="0"，
-        所以这是可达的。
-        """
-        spread = self.params.get('income_age_spread')
-        if spread is not None and spread <= 0:
-            raise ValueError(f'income_age_spread 必须为正数（收入年龄曲线的宽度），收到 {spread}')
+        for key, value in self.params.items():
+            spec = PARAM_SPECS[key]
+            if not math.isfinite(value):
+                raise ValueError(f'参数 {key} 必须是有限数值，收到 {value!r}')
+            if not spec.minimum <= value <= spec.maximum:
+                raise ValueError(
+                    f'参数 {key} 必须在 {spec.minimum:g}–{spec.maximum:g} 之间，收到 {value:g}'
+                )
+            if spec.kind == 'switch' and value not in (0.0, 1.0):
+                raise ValueError(f'参数 {key} 只能是 0 或 1，收到 {value:g}')
 
-        if self.steps < 0:
-            raise ValueError(f'steps 不能为负数，收到 {self.steps}')
+        if len(self.families) > MAX_FAMILIES:
+            raise ValueError(f'家庭数不能超过 {MAX_FAMILIES}，收到 {len(self.families)}')
+        total_members = 0
+        for family in self.families:
+            if len(family.members) > MAX_MEMBERS_PER_FAMILY:
+                raise ValueError(
+                    f'家庭 {family.name!r} 的成员数不能超过 {MAX_MEMBERS_PER_FAMILY}，'
+                    f'收到 {len(family.members)}'
+                )
+            total_members += len(family.members)
+        if total_members > MAX_TOTAL_MEMBERS:
+            raise ValueError(f'总成员数不能超过 {MAX_TOTAL_MEMBERS}，收到 {total_members}')
         return self
 
 class FitRequest(BaseModel):
     model_name: str = 'wellbeing'
     agent_id: str | None = None
     robust: bool = True
+    run_id: str | None = None
     # 抽象模型（square_law 的 R1/R2、influence 的 O1/O2 等）与 ABM 状态列之间没有
     # 默认语义对应关系，必须由调用方显式给出；默认 None 表示使用
     # 「状态名 -> state_<状态名>」约定。
@@ -298,33 +341,29 @@ async def dashboard(request: Request):
 async def api_params():
     from ..family.family_member import DEFAULT_PARAMS
     groups = {
-        "Education": ["education_rate"],
-        "Income": ["income_base", "income_edu_boost", "income_age_peak", "income_age_spread"],
-        "Health": ["health_floor", "health_decay_rate", "health_edu_protection"],
-        "Stress": ["stress_base", "stress_work_add", "stress_decay", "stress_neuro_sensitivity",
-                   "stress_pressure_gain", "income_baseline"],
-        "Happiness": ["happiness_baseline", "happiness_health_weight", "happiness_income_weight", "happiness_edu_weight", "happiness_stress_penalty", "happiness_recovery"],
-        "Noise": ["randomness"],
-        # 家庭支持政策的作用点：影响强度与收入支持对应具体政策工具
-        "Family Support": ["influence_strength", "income_support",
-                           "use_life_stage_susceptibility", "role_switch"],
+        name: [key for key in keys if key in DEFAULT_PARAMS]
+        for name, keys in PARAM_GROUPS.items()
     }
-    # 只暴露真实存在的参数：改名或删参数时不会静默漏项
-    groups = {name: [key for key in keys if key in DEFAULT_PARAMS] for name, keys in groups.items()}
-    unknown = [key for key in DEFAULT_PARAMS if not any(key in keys for keys in groups.values())]
+    unknown = [
+        key for key in DEFAULT_PARAMS
+        if not any(key in keys for keys in groups.values())
+    ]
     if unknown:
         groups["Other"] = unknown
+    specs = {
+        key: PARAM_SPECS[key].to_dict()
+        for key in DEFAULT_PARAMS
+        if key in PARAM_SPECS
+    }
     return JSONResponse({
         'defaults': DEFAULT_PARAMS,
         'groups': groups,
+        'specs': specs,
+        'limits': SIM_LIMITS,
     })
 
 
-@app.post('/api/run')
-@_guard_endpoint('POST /api/run')
-async def api_run(cfg: SimConfig):
-    global _sim_env, _sim_df, _sim_recorder
-
+def _api_run_impl(cfg: SimConfig) -> JSONResponse:
     env = Environment()
     env.params = cfg.params
     # 先建立随机数上下文：这样智能体初始化与后续演化都来自同一条可复现的随机流
@@ -343,27 +382,46 @@ async def api_run(cfg: SimConfig):
     sim.add_recorder(recorder)
     sim.run(cfg.steps)
 
-    _sim_env, _sim_recorder = env, recorder
-    _sim_df = recorder.to_dataframe()
+    snapshot = RunSnapshot(
+        run_id=uuid.uuid4().hex,
+        env=env,
+        df=recorder.to_dataframe(),
+        recorder=recorder,
+    )
+    _run_store.publish(snapshot)
 
     return JSONResponse({
         'status': 'ok',
+        'run_id': snapshot.run_id,
         'steps': cfg.steps,
         'seed': cfg.seed,
         'agents': len(env.agents),
-        'observations': len(_sim_df),
+        'observations': len(snapshot.df),
     })
+
+
+def _api_run_thread(cfg: SimConfig) -> JSONResponse:
+    with _run_slot:
+        return _api_run_impl(cfg)
+
+
+@app.post('/api/run')
+@_guard_endpoint('POST /api/run')
+async def api_run(cfg: SimConfig):
+    return await asyncio.to_thread(_api_run_thread, cfg)
 
 
 @app.get('/api/data')
 @_guard_endpoint('GET /api/data')
-async def api_data():
-    global _sim_df, _sim_env
-    if _sim_df is None or _sim_env is None:
-        return JSONResponse({'error': 'No simulation data. POST /api/run first.'}, 400)
+async def api_data(run_id: str | None = None):
+    snapshot, error = _resolve_run(run_id)
+    if error is not None:
+        return error
+
+    env, source_df, recorder = snapshot.env, snapshot.df, snapshot.recorder
 
     agents = []
-    for a in _sim_env.get_agents():
+    for a in env.get_agents():
         if isinstance(a, FamilyMember):
             agents.append({
                 'id': a.id,
@@ -372,7 +430,7 @@ async def api_data():
                 'age': round(a.get_attribute('age'), 1),
             })
 
-    df = _sim_df.copy()
+    df = source_df.copy()
     for c in df.columns:
         if pd.api.types.is_float_dtype(df[c]):
             df[c] = df[c].round(4)
@@ -382,9 +440,10 @@ async def api_data():
     # 比真实值低约 28.6%，并与 fitter 自己用的 NaN 跳过均值不是同一序列。
     # pandas 的 NaN 在 json.dumps 中会变成非法的 NaN 字面量，因此显式转成 None。
     records = df.astype(object).where(pd.notna(df), None).to_dict(orient='records')
-    statistics = _sim_recorder.to_statistics_dataframe() if _sim_recorder is not None else pd.DataFrame()
+    statistics = recorder.to_statistics_dataframe() if recorder is not None else pd.DataFrame()
 
     return JSONResponse({
+        'run_id': snapshot.run_id,
         'agents': agents,
         'columns': list(df.columns),
         'data': records,
@@ -431,7 +490,8 @@ def _column_variance_report(df: pd.DataFrame) -> tuple[list[str], list[str], lis
 
 
 @app.get('/api/models')
-async def api_models(agent_id: str | None = None):
+@_guard_endpoint('GET /api/models')
+async def api_models(agent_id: str | None = None, run_id: str | None = None):
     """列出可用模型及其状态名、以及相对当前数据的可映射性。
 
     前端据此决定下拉里哪些模型可以直接拟合；对不可直接映射的模型给出**候选**
@@ -452,14 +512,25 @@ async def api_models(agent_id: str | None = None):
     agent_id : str, optional
         按单个 agent 评估可拟合性。拟合到单个 agent 时用的是该 agent 自己的序列，
         因此"整体有变化、但该 agent 恒定"的列必须按该 agent 的子集重新判定。
+    run_id : str, optional
+        固定读取的运行快照；空值表示最新运行。
     """
-    frame = _sim_df
+    snapshot, error = _resolve_run(run_id)
+    if error is not None:
+        return error
+    frame = snapshot.df
     if agent_id is not None:
-        if frame is None or 'agent_id' not in frame.columns:
-            return JSONResponse({'error': '没有仿真数据或数据缺少 agent_id 列。'}, 400)
+        if 'agent_id' not in frame.columns:
+            return JSONResponse({
+                'error': '没有仿真数据或数据缺少 agent_id 列。',
+                'status': 'invalid_dataframe',
+            }, 400)
         frame = frame[frame['agent_id'] == agent_id]
         if frame.empty:
-            return JSONResponse({'error': f'没有 agent_id={agent_id!r} 的记录。'}, 400)
+            return JSONResponse({
+                'error': f'没有 agent_id={agent_id!r} 的记录。',
+                'status': 'unknown_agent',
+            }, 400)
 
     usable, constant, unverifiable = _column_variance_report(frame)
     flat_columns = set(constant) | set(unverifiable)
@@ -505,6 +576,7 @@ async def api_models(agent_id: str | None = None):
             'suggested_mapping': suggested,
         })
     return JSONResponse({
+        'run_id': snapshot.run_id,
         'models': models,
         'available_state_columns': usable + constant + unverifiable,
         'usable_state_columns': usable,
@@ -517,19 +589,17 @@ async def api_models(agent_id: str | None = None):
 async def api_fit(req: FitRequest):
     """在线程池里跑 CPU 密集的拟合，并对事件循环加超时保护。
 
-    round-2 审查 C4：此前 `await _api_fit_impl(req)` 直接在事件循环里同步执行
-    `fit_robust`，一次 wellbeing robust=True 拟合 38.4s 期间整个单进程服务不可用
-    （并发的 GET /api/params 延迟 37.4s）。现在实现体是同步函数，由
-    `asyncio.to_thread` 放到 worker 线程执行，事件循环只等待结果；
-    `asyncio.wait_for` 给出可配置的上限（默认 120s，见 FIT_TIMEOUT_SECONDS）。
-
-    注意：线程无法被强制杀死——超时后请求立即收到结构化 504，但后台线程可能
-    仍会把这次拟合跑完（结果只写入 _last_fitter，不影响已返回的响应）。
+    拟合绑定请求开始时解析出的运行快照。新的 run 可以同时发布，但不会改变本次
+    拟合读取的数据；超时后线程仍可能继续运行，迟到结果不会发布到任何全局状态。
     """
+    snapshot, error = _resolve_run(req.run_id)
+    if error is not None:
+        return error
+
     timeout = FIT_TIMEOUT_SECONDS
     try:
         return await asyncio.wait_for(
-            asyncio.to_thread(_api_fit_impl, req), timeout=timeout,
+            asyncio.to_thread(_api_fit_thread, req, snapshot), timeout=timeout,
         )
     except asyncio.TimeoutError:
         logger.error('POST /api/fit 超过 %gs 上限，放弃等待（worker 线程可能仍在运行）', timeout)
@@ -556,22 +626,24 @@ async def api_fit(req: FitRequest):
         }, 500)
 
 
-def _api_fit_impl(req: FitRequest):
+def _api_fit_thread(req: FitRequest, snapshot: RunSnapshot) -> JSONResponse:
+    with _fit_slot:
+        return _api_fit_impl(req, snapshot)
+
+
+def _api_fit_impl(req: FitRequest, snapshot: RunSnapshot):
     """api_fit 的实现体（同步，由 api_fit 放进 worker 线程执行）。
 
     异常处理统一由 api_fit 的函数级兜底负责。
     """
-    global _last_fitter
-    if _sim_df is None:
-        return JSONResponse({'error': 'No simulation data. POST /api/run first.'}, 400)
-
+    df = snapshot.df
     required = {'time'}
     if req.agent_id is not None:
         required.add('agent_id')
-    missing = sorted(c for c in required if c not in _sim_df.columns)
+    missing = sorted(c for c in required if c not in df.columns)
     if missing:
         return JSONResponse({
-            'error': f'仿真数据缺少必需列 {missing}（当前列：{list(_sim_df.columns)}）。',
+            'error': f'仿真数据缺少必需列 {missing}（当前列：{list(df.columns)}）。',
             'status': 'invalid_dataframe',
         }, 400)
 
@@ -589,10 +661,10 @@ def _api_fit_impl(req: FitRequest):
     # 显式映射指向非数值列：这是调用方输入错误（不是服务端故障），提前给出 400 与
     # 可用列清单，而不是等 pandas 抛出 TypeError 再报 500
     # （复核实测：state_mapping 把状态映射到 agent_id 等字符串列时得到 500 fitting_error）。
-    numeric_columns = set(_sim_df.select_dtypes(include='number').columns)
+    numeric_columns = set(df.select_dtypes(include='number').columns)
     expected_columns = {state: fitter._resolve_col(state) for state in fitter.state_names}
     invalid = {state: col for state, col in expected_columns.items()
-               if col in _sim_df.columns and col not in numeric_columns}
+               if col in df.columns and col not in numeric_columns}
     if invalid:
         return JSONResponse({
             'error': (
@@ -604,9 +676,9 @@ def _api_fit_impl(req: FitRequest):
 
     try:
         if req.robust:
-            result = fitter.fit_robust(_sim_df, agent_id=req.agent_id)
+            result = fitter.fit_robust(df, agent_id=req.agent_id)
         else:
-            result = fitter.fit_from_dataframe(_sim_df, agent_id=req.agent_id)
+            result = fitter.fit_from_dataframe(df, agent_id=req.agent_id)
     except ValueError as exc:
         # 状态列无法解析 / 参数边界不合法 / 数据不足等可预期的输入问题
         return JSONResponse({'error': str(exc), 'status': 'invalid_input'}, 400)
@@ -615,8 +687,6 @@ def _api_fit_impl(req: FitRequest):
             'error': f'{exc}（多起点拟合全部失败；请检查状态列选择与参数边界，或减少起点数重试）',
             'status': 'all_starts_failed',
         }, 400)
-
-    _last_fitter = fitter
 
     # 优化器自身失败（超过迭代上限等）属于"模型/边界不适用"，返回 400 并带诊断。
     if result is None or not bool(getattr(result, 'success', False)):
@@ -639,8 +709,10 @@ def _api_fit_impl(req: FitRequest):
     if summary['hit_sentinel']:
         return JSONResponse({
             'status': 'model_not_applicable',
+            'run_id': snapshot.run_id,
             'model': req.model_name,
             'state_columns': fitter._resolved_columns,
+            'state_names': fitter.state_names,
             'summary': summary,
             'predict_trace': [],
             'prediction_skipped': True,
@@ -672,53 +744,93 @@ def _api_fit_impl(req: FitRequest):
 
     return JSONResponse({
         'status': 'ok',
+        'run_id': snapshot.run_id,
         'model': req.model_name,
         'state_columns': fitter._resolved_columns,
+        'state_names': fitter.state_names,
         'summary': summary,
         'predict_trace': predict_trace,
         'warning': None,
     })
 
 
+_NICHE_STATE_FIELDS = {
+    'economic': 'state_income',
+    'cultural': 'state_education',
+    'social': 'state_social_capital',
+    'emotional': 'state_happiness',
+}
+
+
+def _finite_number(value: Any) -> float | None:
+    """Return a finite float, or None for missing/non-finite state values."""
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 @app.get('/api/niche')
 @_guard_endpoint('GET /api/niche')
-async def api_niche():
-    global _sim_env, _sim_df
-    if _sim_env is None or _sim_df is None:
-        return JSONResponse({'error': 'No simulation data. POST /api/run first.'}, 400)
+async def api_niche(run_id: str | None = None):
+    snapshot, error = _resolve_run(run_id)
+    if error is not None:
+        return error
+    env, source_df = snapshot.env, snapshot.df
 
     niches = []
-    for agent in _sim_env.get_agents():
+    for agent in env.get_agents():
         if isinstance(agent, FamilyMember):
             n = MicroNiche(niche_id=agent.id)
-            sub = _sim_df[_sim_df['agent_id'] == agent.id]
+            sub = source_df[source_df['agent_id'] == agent.id]
+            raw_values: dict[str, float | None] = {}
+            observed: dict[str, float] = {}
             if not sub.empty:
                 last = sub.iloc[-1]
-                agent_state = {
-                    'income': last.get('state_income', 0),
-                    'education': last.get('state_education', 0.5),
-                    'social_capital': last.get('state_social_capital', 0.5),
-                    'happiness': last.get('state_happiness', 0.5),
-                }
-                n.update_from_agent_state(agent_state)
+                for dimension, column in _NICHE_STATE_FIELDS.items():
+                    raw = _finite_number(last.get(column))
+                    raw_values[dimension] = raw
+                    if raw is not None:
+                        observed[dimension] = raw
+            else:
+                raw_values = {dimension: None for dimension in _NICHE_STATE_FIELDS}
+
+            if observed:
+                n.update_from_agent_state(observed)
+            position = {
+                dimension: n.position[dimension] if dimension in observed else None
+                for dimension in n.dimensions
+            }
+            missing = [d for d in n.dimensions if d not in observed]
+            clipped = [
+                d for d, value in observed.items()
+                if value < 0.0 or value > 1.0
+            ]
             niches.append({
                 'id': agent.id,
                 'name': agent.get_attribute('name'),
                 'role': agent.get_attribute('role'),
-                'position': n.position,
+                'position': position,
+                'raw_values': raw_values,
+                'observed_dimensions': list(observed),
+                'missing_dimensions': missing,
+                'clipped_dimensions': clipped,
             })
-    return JSONResponse({'niches': niches})
+    return JSONResponse({'run_id': snapshot.run_id, 'niches': niches})
 
 
 @app.get('/api/network')
 @_guard_endpoint('GET /api/network')
-async def api_network():
-    global _sim_env
-    if _sim_env is None:
-        return JSONResponse({'error': 'No simulation data. POST /api/run first.'}, 400)
+async def api_network(run_id: str | None = None):
+    snapshot, error = _resolve_run(run_id)
+    if error is not None:
+        return error
 
     networks = []
-    for agent in _sim_env.get_agents():
+    for agent in snapshot.env.get_agents():
         if isinstance(agent, Household):
             nodes = []
             for mid, m in agent.members.items():
@@ -741,4 +853,4 @@ async def api_network():
                 'nodes': nodes,
                 'edges': edges,
             })
-    return JSONResponse({'networks': networks})
+    return JSONResponse({'run_id': snapshot.run_id, 'networks': networks})

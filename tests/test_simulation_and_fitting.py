@@ -21,8 +21,15 @@ import pytest
 
 from family_abm import Environment, FamilyMember, Household, Scheduler, Simulation, StateRecorder
 from family_abm.fitting.fitter import compare_models, make_fitter
+from family_abm.web.run_store import RunSnapshot, RunStore
 
 STEPS = 15
+
+
+def _install_frame(monkeypatch: pytest.MonkeyPatch, module, frame: pd.DataFrame) -> None:
+    store = RunStore()
+    store.publish(RunSnapshot(run_id="test-run", env=None, df=frame, recorder=None))
+    monkeypatch.setattr(module, "_run_store", store)
 
 
 def _seed(value: int = 20260101) -> None:
@@ -357,7 +364,9 @@ def test_api_models_excludes_constant_columns_from_suggestions() -> None:
                 assert column in payload["usable_state_columns"]
 
 
-def test_models_endpoint_marks_needs_manual_mapping_when_candidates_run_out() -> None:
+def test_models_endpoint_marks_needs_manual_mapping_when_candidates_run_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """候选列不足时必须 needs_manual_mapping=True 且不给建议（此前零覆盖）。"""
     import asyncio
     import importlib
@@ -369,13 +378,9 @@ def test_models_endpoint_marks_needs_manual_mapping_when_candidates_run_out() ->
         "state_only_changing": [0.1, 0.3, 0.5, 0.7],
         "state_pinned": [1.0, 1.0, 1.0, 1.0],
     })
-    original = web_app_module._sim_df
-    web_app_module._sim_df = frame
-    try:
-        payload = asyncio.run(web_app_module.api_models())
-        body = json.loads(payload.body)
-    finally:
-        web_app_module._sim_df = original
+    _install_frame(monkeypatch, web_app_module, frame)
+    payload = asyncio.run(web_app_module.api_models())
+    body = json.loads(payload.body)
 
     assert body["usable_state_columns"] == ["state_only_changing"]
     assert body["constant_state_columns"] == ["state_pinned"]
@@ -476,7 +481,7 @@ def test_web_fit_returns_200_with_warning_for_sentinel_solution(monkeypatch: pyt
             return {"hit_sentinel": True, "r_squared": None, "converged": False, "params_at_bounds": []}
 
     monkeypatch.setattr(web_app_module, "make_fitter", lambda *a, **k: _SentinelFitter())
-    monkeypatch.setattr(web_app_module, "_sim_df", pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
+    _install_frame(monkeypatch, web_app_module, pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
 
     response = asyncio.run(web_app_module.api_fit(web_app_module.FitRequest(model_name="square_law", robust=False)))
     assert response.status_code == 200, response.body
@@ -523,7 +528,7 @@ def test_sentinel_check_precedes_prediction(monkeypatch: pytest.MonkeyPatch) -> 
 
     stub = _SentinelWithFailingPredict()
     monkeypatch.setattr(web_app_module, "make_fitter", lambda *a, **k: stub)
-    monkeypatch.setattr(web_app_module, "_sim_df", pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
+    _install_frame(monkeypatch, web_app_module, pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
 
     response = asyncio.run(web_app_module.api_fit(web_app_module.FitRequest(model_name="square_law", robust=False)))
     assert response.status_code == 200, response.body
@@ -545,7 +550,7 @@ def test_missing_time_or_agent_column_reports_invalid_dataframe(monkeypatch: pyt
         pd.DataFrame({"agent_id": ["a"], "state_happiness": [0.1]}),          # 缺 time
         pd.DataFrame({"time": [0], "state_happiness": [0.1]}),                # 缺 agent_id（按 agent 拟合时）
     ):
-        monkeypatch.setattr(web_app_module, "_sim_df", frame)
+        _install_frame(monkeypatch, web_app_module, frame)
         request = web_app_module.FitRequest(model_name="wellbeing", robust=False)
         if "agent_id" not in frame.columns:
             request.agent_id = "a"
@@ -578,7 +583,7 @@ def test_web_fit_maps_optimizer_failure_to_400(monkeypatch: pytest.MonkeyPatch) 
             return {"hit_sentinel": False, "r_squared": 0.0, "converged": False}
 
     monkeypatch.setattr(web_app_module, "make_fitter", lambda *a, **k: _FailedOptimizerFitter())
-    monkeypatch.setattr(web_app_module, "_sim_df", pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
+    _install_frame(monkeypatch, web_app_module, pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
 
     response = asyncio.run(web_app_module.api_fit(web_app_module.FitRequest(model_name="wellbeing", robust=False)))
     assert response.status_code == 400
@@ -607,7 +612,7 @@ def test_web_fit_maps_all_starts_failure_to_400(monkeypatch: pytest.MonkeyPatch)
             return {"hit_sentinel": True}
 
     monkeypatch.setattr(web_app_module, "make_fitter", lambda *a, **k: _FailingFitter())
-    monkeypatch.setattr(web_app_module, "_sim_df", pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
+    _install_frame(monkeypatch, web_app_module, pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
 
     response = asyncio.run(web_app_module.api_fit(web_app_module.FitRequest(model_name="resource_competition", robust=True)))
     assert response.status_code == 400
@@ -647,7 +652,7 @@ def test_web_fit_does_not_mask_prediction_failure_as_400(monkeypatch: pytest.Mon
             return {"hit_sentinel": False, "r_squared": 0.9, "converged": True, "params_at_bounds": []}
 
     monkeypatch.setattr(web_app_module, "make_fitter", lambda *a, **k: _PredictFailsFitter())
-    monkeypatch.setattr(web_app_module, "_sim_df", pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
+    _install_frame(monkeypatch, web_app_module, pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
 
     response = asyncio.run(web_app_module.api_fit(web_app_module.FitRequest(model_name="wellbeing", robust=False)))
     assert response.status_code == 500
@@ -724,7 +729,7 @@ def test_build_fit_chart_does_not_shadow_i18n_function() -> None:
     assert "t('fitting.data_suffix')" in body, "i18n 调用必须仍然有效"
 
 
-def test_models_endpoint_respects_agent_subset() -> None:
+def test_models_endpoint_respects_agent_subset(monkeypatch: pytest.MonkeyPatch) -> None:
     """/api/models 支持按 agent 子集评估：整体有变化但该 agent 恒定的列应判为常量。"""
     import asyncio
     import importlib
@@ -737,13 +742,9 @@ def test_models_endpoint_respects_agent_subset() -> None:
         "state_happiness": [0.5, 0.5, 0.5, 0.1, 0.5, 0.9],
         "state_stress": [0.2, 0.4, 0.6, 0.2, 0.4, 0.6],
     })
-    original = web_app_module._sim_df
-    web_app_module._sim_df = frame
-    try:
-        pooled = json.loads(asyncio.run(web_app_module.api_models()).body)
-        subset = json.loads(asyncio.run(web_app_module.api_models(agent_id="A")).body)
-    finally:
-        web_app_module._sim_df = original
+    _install_frame(monkeypatch, web_app_module, frame)
+    pooled = json.loads(asyncio.run(web_app_module.api_models()).body)
+    subset = json.loads(asyncio.run(web_app_module.api_models(agent_id="A")).body)
 
     assert "state_happiness" in pooled["usable_state_columns"], "整体看 happiness 有变化"
     assert "state_happiness" in subset["constant_state_columns"], "agent A 的 happiness 恒定"
@@ -809,7 +810,7 @@ def test_unexpected_fitting_error_keeps_structured_json(monkeypatch: pytest.Monk
             return {}
 
     monkeypatch.setattr(web_app_module, "make_fitter", lambda *a, **k: _ExplodingFitter())
-    monkeypatch.setattr(web_app_module, "_sim_df", pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
+    _install_frame(monkeypatch, web_app_module, pd.DataFrame({"time": [0, 1], "state_happiness": [0.1, 0.2]}))
 
     response = asyncio.run(web_app_module.api_fit(web_app_module.FitRequest(model_name="wellbeing", robust=False)))
     assert response.status_code == 500
@@ -860,7 +861,14 @@ def test_dashboard_behavior_harness_passes() -> None:
     if node is None:
         pytest.skip("环境没有 node，无法运行 dashboard 行为测试")
     harness = Path(__file__).resolve().parent.parent / "tools" / "check_dashboard_behavior.js"
-    result = subprocess.run([node, str(harness)], capture_output=True, text=True, timeout=120)
+    result = subprocess.run(
+        [node, str(harness)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=120,
+    )
     assert result.returncode == 0, f"dashboard 行为测试失败：\n{result.stdout}\n{result.stderr}"
     assert "结果：全部通过" in result.stdout, result.stdout
 
@@ -938,6 +946,9 @@ def test_web_fit_returns_400_with_hint_for_unmappable_model(sim_df: pd.DataFrame
 
     good = client.post("/api/fit", json={"model_name": "wellbeing", "robust": False})
     assert good.status_code == 200, good.text
+    good_body = good.json()
+    assert good_body["state_names"] == ["happiness", "stress"]
+    assert set(good_body["summary"]["per_state"]) == {"happiness", "stress"}
 
 
 # ── 拟合器输入校验（round-2 审查 A-01 / A-02）────────────────────────────

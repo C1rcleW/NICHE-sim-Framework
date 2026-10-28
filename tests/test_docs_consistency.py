@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -61,3 +62,21 @@ def test_research_markdown_is_readable_on_github() -> None:
 
     # DOCX 里用角括号表示中文引号，派生结果应保留（不应出现裸 ASCII 引号对）
     assert "「" in text and "」" in text, "中文引号丢失"
+
+
+def test_readme_image_links_point_to_real_images() -> None:
+    """README 引用的 Web 截图与数据测试图必须存在且不是占位文件。"""
+    text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    paths = re.findall(r"!\[[^\]]*\]\(([^)]+\.png)\)", text)
+    assert set(paths) >= {
+        "docs/screenshots/dashboard.png",
+        "docs/screenshots/fitting.png",
+        "docs/screenshots/network.png",
+        "experiments/results/mechanism_validation.png",
+        "experiments/results/sensitivity_analysis.png",
+        "experiments/results/life_stage_reducibility.png",
+    }, f"README 图片链接不完整：{paths}"
+    for relative in paths:
+        image = REPO_ROOT / relative
+        assert image.is_file(), f"图片不存在：{relative}"
+        assert image.stat().st_size > 10_000, f"图片疑似占位文件：{relative}"

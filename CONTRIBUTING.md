@@ -17,7 +17,12 @@ pip install -e ".[dev]"
 python -m pytest tests/ -q
 ```
 
-需要 Python 3.9+。前端行为检查需要 Node.js（可选；缺少时相关测试会跳过）。
+需要 Python >=3.10。前端行为检查需要 Node.js；真实浏览器测试需要额外安装：
+
+```bash
+pip install -e ".[dev,e2e]"
+python -m playwright install chromium
+```
 
 ## 提交前检查清单
 
@@ -25,7 +30,8 @@ python -m pytest tests/ -q
 python -m pytest tests/ -q                              # 全部测试
 python -m pytest tests/ -q -m "not packaging"           # 跳过构建/安装测试（环境受限时）
 python -m ruff check family_abm tests tools experiments # 静态检查（ruff 0.17.0，见 pyproject）
-node tools/check_dashboard_behavior.js                  # 前端行为（可选）
+node tools/check_dashboard_behavior.js                  # 前端行为
+RUN_BROWSER_TESTS=1 python -m pytest tests/test_browser_smoke.py -q  # 真实浏览器（已安装 Playwright）
 
 # 若改动影响默认行为，需重跑基线并确认差异符合预期
 python tools/baseline.py --check baseline/default_seed42.json

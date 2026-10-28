@@ -103,7 +103,8 @@ python -m family_abm.web      # 启动仪表板 → http://127.0.0.1:8520
 **研究实验（`experiments/`）**
 
 - `mechanism_validation.py` 四项可证伪检验：E1 易感性阶段结构、E2 效力随阶段递减、E3 剂量-反应与适用边界、E4 成年后滞后效应
-- `sensitivity_analysis.py` 参数敏感性：五条结论在 25–75 个参数组合下全部成立
+- `sensitivity_analysis.py` 参数敏感性：报告五条结论各自的稳健组合数；
+  后续复核确认 P2/P3 并非在所有组合下成立
 - `life_stage_reducibility.py` 可约性实验（结果是否定的，见下）
 
 **文档与工程**

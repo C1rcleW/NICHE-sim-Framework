@@ -15,6 +15,8 @@ X/y 用同一掩码对齐。
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
+import pytest
 
 from family_abm import StateRecorder
 from family_abm.ml.features import FeatureExtractor
@@ -73,13 +75,13 @@ def test_lag_target_tail_is_dropped_not_zero() -> None:
     """lag=1 时每个 agent 最后一行没有未来目标：丢弃，不伪造成 y=0。"""
     extractor = FeatureExtractor(make_recorder())
     X, y = extractor.extract_features(
-        feature_columns=["state_happiness"],
+        feature_columns=["state_stress"],
         target_column="state_happiness",
         lag_steps=1,
     )
     # 成员 t=0 → 目标 t=1；成员 t=1 的未来缺失；家庭行全程因特征 NaN 被丢弃
     assert X.shape == (1, 1) and y is not None and y.shape == (1,)
-    np.testing.assert_allclose(X[0], [0.5])
+    np.testing.assert_allclose(X[0], [0.3])
     np.testing.assert_allclose(y, [0.6])
     assert not (y == 0).any(), "轨迹尾部不得被伪造成目标 0"
 
@@ -108,3 +110,94 @@ def test_rows_sorted_by_agent_then_time() -> None:
     # 同一 agent 的多行按时间升序
     times = df[df["agent_id"] == HOUSEHOLD].sort_values("time")["time"].tolist()
     assert times == [0, 1]
+
+
+def test_default_supervised_features_exclude_target_and_other_agent_states() -> None:
+    frame = FeatureExtractor(make_recorder()).extract_supervised_frame(
+        target_column="state_happiness",
+        lag_steps=1,
+    )
+    assert len(frame) == 1
+    assert list(frame[["agent_id", "time"]].iloc[0]) == [MEMBER, 0]
+    feature_cols = list(frame.columns[:-1])
+    assert "state_happiness" not in feature_cols
+    assert "state_total_income" not in feature_cols, "不得混入目标行没有的状态列"
+    assert "state_stress" in feature_cols
+    assert frame.columns[-1] == "state_happiness"
+
+
+def test_explicit_feature_columns_reject_target_and_invalid_columns() -> None:
+    extractor = FeatureExtractor(make_recorder())
+    with pytest.raises(ValueError, match="目标列"):
+        extractor.extract_features(
+            feature_columns=["state_happiness"],
+            target_column="state_happiness",
+        )
+    with pytest.raises(ValueError, match="不存在"):
+        extractor.extract_features(feature_columns=["state_missing"])
+    with pytest.raises(ValueError, match="不能为空"):
+        extractor.extract_features(feature_columns=[])
+    with pytest.raises(ValueError, match="重复列"):
+        extractor.extract_features(feature_columns=["state_stress", "state_stress"])
+
+
+@pytest.mark.parametrize("lag", [0, -1, 1.5, True])
+def test_lag_steps_must_be_positive_integer(lag) -> None:
+    extractor = FeatureExtractor(make_recorder())
+    with pytest.raises(ValueError, match="lag_steps"):
+        extractor.extract_features(target_column="state_happiness", lag_steps=lag)
+    with pytest.raises(ValueError, match="lag_steps"):
+        extractor.build_transition_dataset(lag=lag)
+
+
+def test_target_column_must_exist_and_be_numeric() -> None:
+    extractor = FeatureExtractor(make_recorder())
+    with pytest.raises(ValueError, match="不存在"):
+        extractor.extract_features(target_column="state_missing")
+    with pytest.raises(ValueError, match="必须是数值列"):
+        extractor.extract_features(target_column="agent_type")
+
+
+def test_transition_dataset_has_target_time_and_validates_columns() -> None:
+    extractor = FeatureExtractor(make_recorder())
+    transitions = extractor.build_transition_dataset(
+        state_columns=["state_stress"],
+        lag=1,
+    )
+    assert set(transitions.columns) == {
+        "state_stress_t", "state_stress_t+1", "agent_id", "time", "target_time",
+    }
+    member_row = transitions[transitions["agent_id"] == MEMBER].iloc[0]
+    assert member_row["time"] == 0
+    assert member_row["target_time"] == 1
+    with pytest.raises(ValueError, match="不存在"):
+        extractor.build_transition_dataset(state_columns=["state_missing"])
+
+
+def test_network_features_can_be_limited_to_past_data() -> None:
+    recorder = StateRecorder(record_agents=True, record_environment=False)
+    recorder.agent_history.extend([
+        {"time": t, "agent_id": MEMBER, "agent_type": "FamilyMember", "alive": True,
+         "state_happiness": value}
+        for t, value in [(0, 0.1), (1, 0.2), (2, 100.0)]
+    ])
+    extractor = FeatureExtractor(recorder)
+    past = extractor.build_network_features(agent_id=MEMBER, up_to_time=1)
+    assert len(past) == 1
+    assert past["state_happiness_mean"].iloc[0] == pytest.approx(0.15)
+    with pytest.raises(ValueError, match="没有 agent_id"):
+        extractor.build_network_features(agent_id="missing")
+
+
+def test_supervised_frame_has_deterministic_time_split() -> None:
+    frame = pd.DataFrame({
+        "agent_id": ["a"] * 4,
+        "time": [0, 1, 2, 3],
+        "x": [1, 2, 3, 4],
+        "y": [2, 3, 4, 5],
+    })
+    train, test = FeatureExtractor.split_by_time(frame, test_start_time=2)
+    assert train["time"].tolist() == [0, 1]
+    assert test["time"].tolist() == [2, 3]
+    with pytest.raises(ValueError, match="时间列"):
+        FeatureExtractor.split_by_time(frame.drop(columns=["time"]), test_start_time=2)

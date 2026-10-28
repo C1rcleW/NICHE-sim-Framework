@@ -9,7 +9,7 @@ import pandas as pd
 from scipy.integrate import solve_ivp
 from scipy.optimize import differential_evolution, minimize
 
-from .lanchester import MODEL_PARAM_NAMES, MODEL_REGISTRY, MODEL_STATE_NAMES, solve_model
+from .lanchester import MODEL_PARAM_NAMES, MODEL_REGISTRY, MODEL_STATE_NAMES
 
 _STATE_PREFIX = 'state_'
 _RTOL = 1e-6
@@ -46,6 +46,7 @@ class ABMFitter:
         self._y_true: np.ndarray | None = None
         self._y0: np.ndarray | None = None
         self._resolved_columns: dict[str, str] = {}
+        self.per_state_metrics_: dict[str, dict[str, Any]] = {}
 
     # ── Data ────────────────────────────────────────────────────────────
 
@@ -335,14 +336,23 @@ class ABMFitter:
         if hasattr(bounds, "lb") and hasattr(bounds, "ub"):
             lower = np.atleast_1d(np.asarray(bounds.lb, dtype=float))
             upper = np.atleast_1d(np.asarray(bounds.ub, dtype=float))
+            if lower.size not in (1, n):
+                raise ValueError(f'下界数量 ({lower.size}) 与参数数量 ({n}) 不一致')
+            if upper.size not in (1, n):
+                raise ValueError(f'上界数量 ({upper.size}) 与参数数量 ({n}) 不一致')
             if lower.size == 1:
                 lower = np.repeat(lower, n)
             if upper.size == 1:
                 upper = np.repeat(upper, n)
-            return [(float(lo), float(hi)) for lo, hi in zip(lower, upper, strict=False)]
-        pairs = [(float(lo), float(hi)) for lo, hi in bounds]
-        if len(pairs) != n:
-            raise ValueError(f'边界数量 ({len(pairs)}) 与参数数量 ({n}) 不一致')
+            pairs = [(float(lo), float(hi)) for lo, hi in zip(lower, upper, strict=True)]
+        else:
+            try:
+                pairs = [(float(lo), float(hi)) for lo, hi in bounds]
+            except (TypeError, ValueError) as exc:
+                raise ValueError('边界必须由有限的 (下界, 上界) 数值对组成') from exc
+            if len(pairs) != n:
+                raise ValueError(f'边界数量 ({len(pairs)}) 与参数数量 ({n}) 不一致')
+
         # 非有限边界（如 inf）会让优化器行为未定义，且 _parameters_at_bounds
         # 的比较失去意义；NaN 边界则会让整个优化静默返回 NaN 参数。
         bad = [(i, lo, hi) for i, (lo, hi) in enumerate(pairs)
@@ -363,7 +373,40 @@ class ABMFitter:
         # 同一个 0.0，而 converged 又要求 r_squared > 0 —— 两者叠加使负 R² 永远
         # 无法被发现（实测原始 -3.5175 被上报为 0.0）。
         self.r_squared = self._r_squared(result.x, t, y_true, y_true[0])
+        self.per_state_metrics_ = self._per_state_metrics(result.x, t, y_true)
         self._bound_params = self._parameters_at_bounds(result.x)
+
+    def _per_state_metrics(
+        self,
+        params: np.ndarray,
+        t: np.ndarray,
+        y_true: np.ndarray,
+    ) -> dict[str, dict[str, Any]]:
+        """Report diagnostics per model state without changing the global R² metric."""
+        prediction = self._solve(params, t, y_true[0])
+        metrics: dict[str, dict[str, Any]] = {}
+        for index, name in enumerate(self.state_names):
+            actual = y_true[:, index]
+            entry: dict[str, Any] = {
+                'column': self._resolved_columns.get(name),
+                'n': int(actual.size),
+                'r_squared': None,
+                'rmse': None,
+                'mean': round(float(np.mean(actual)), 6),
+            }
+            if prediction is None or prediction.shape != y_true.shape:
+                metrics[name] = entry
+                continue
+            predicted = prediction[:, index]
+            residual = predicted - actual
+            ss_res = float(np.sum(residual ** 2))
+            ss_tot = float(np.sum((actual - np.mean(actual)) ** 2))
+            entry['r_squared'] = (
+                None if ss_tot == 0.0 else round(1.0 - ss_res / ss_tot, 6)
+            )
+            entry['rmse'] = round(float(np.sqrt(np.mean(residual ** 2))), 6)
+            metrics[name] = entry
+        return metrics
 
     def _parameters_at_bounds(self, params: np.ndarray, tol: float = _BOUND_TOL) -> list[str]:
         """返回贴在上/下界的参数名（**仅用于告警**，不参与 converged 判定）。
@@ -392,8 +435,20 @@ class ABMFitter:
     def predict(self, t: np.ndarray, y0: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         if self.fitted_params_ is None:
             raise RuntimeError('Call fit_*() before predict().')
-        return solve_model(self.model_func, y0.tolist(), t,
-                           self.fitted_params_.tolist())
+        t_array = np.asarray(t, dtype=float)
+        y0_array = np.asarray(y0, dtype=float)
+        if t_array.ndim != 1 or t_array.size < 2:
+            raise ValueError('预测时间轴必须是一维且至少包含两个点')
+        if not np.all(np.isfinite(t_array)) or np.any(np.diff(t_array) <= 0.0):
+            raise ValueError('预测时间轴必须严格递增且全部为有限值')
+        if y0_array.shape != (self.n_states,):
+            raise ValueError(f'初值形状应为 ({self.n_states},)，收到 {y0_array.shape}')
+        if not np.all(np.isfinite(y0_array)):
+            raise ValueError('预测初值包含非有限值')
+        prediction = self._solve(self.fitted_params_, t_array, y0_array)
+        if prediction is None or prediction.shape != (t_array.size, self.n_states):
+            raise RuntimeError('ODE 预测积分失败')
+        return t_array, prediction.T
 
     # ── Diagnostics ──────────────────────────────────────────────────────
 
@@ -448,6 +503,7 @@ class ABMFitter:
             'n_states': self.n_states,
             'state_names': self.state_names,
             'state_columns': dict(self._resolved_columns),
+            'per_state': dict(self.per_state_metrics_),
             'fun': fun_val,
             'hit_sentinel': self._objective_hit_sentinel(),
             'params_at_bounds': list(self._bound_params),

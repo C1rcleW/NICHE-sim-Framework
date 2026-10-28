@@ -17,7 +17,7 @@
     <button data-tab="network" data-i18n="tab.network">Network</button>
   </nav>
   <div class="header-right">
-    <span class="status"><span class="dot" id="statusDot"></span><span id="statusText" data-i18n="status.ready">Ready</span></span>
+    <span class="status"><span class="dot" id="statusDot"></span><span id="statusText">Ready</span></span>
     <div class="lang-switch" id="langSwitch">
       <button class="lang-btn" id="langBtn" title="Settings">⚙</button>
       <div class="lang-drop" id="langDrop">
@@ -38,7 +38,7 @@
       <div class="form-row" style="margin-top:16px">
         <div class="form-group">
           <label data-i18n="setup.steps">Steps</label>
-          <input type="number" id="simSteps" value="120" min="10" max="5000">
+          <input type="number" id="simSteps" value="120" min="0" max="5000">
         </div>
         <div class="form-group">
           <label data-i18n="setup.seed">Random Seed</label>
@@ -46,7 +46,7 @@
         </div>
         <div class="form-group">
           <label>&nbsp;</label>
-          <button class="btn btn-primary" data-i18n="setup.run" onclick="runSimulation()">Run Simulation</button>
+          <button class="btn btn-primary" id="runSimBtn" data-i18n="setup.run" onclick="runSimulation()">Run Simulation</button>
         </div>
       </div>
     </div>
@@ -79,6 +79,7 @@
     </div>
     <div class="card" id="nicheCard" style="display:none">
       <div class="card-header"><h2 data-i18n="charts.niche">Niche Space</h2></div>
+      <div id="nicheWarning" class="fit-warning" style="display:none"></div>
       <div class="chart-container" id="chartNiche"></div>
     </div>
   </section>

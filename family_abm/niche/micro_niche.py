@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import numpy as np
@@ -17,7 +18,10 @@ class MicroNiche:
 
     def set_position(self, dimension: str, value: float) -> None:
         if dimension in self.dimensions:
-            self.position[dimension] = max(0.0, min(1.0, value))
+            numeric = float(value)
+            if not math.isfinite(numeric):
+                raise ValueError(f'生境坐标必须是有限数值，收到 {value!r}')
+            self.position[dimension] = max(0.0, min(1.0, numeric))
 
     def get_position_vector(self) -> np.ndarray:
         return np.array([self.position[d] for d in self.dimensions])

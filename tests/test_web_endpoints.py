@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from family_abm.web.app import app as web_app
+from family_abm.web.run_store import RunStore
 
 # 注意：`import family_abm.web.app as m` 会因包的属性遮蔽拿到 FastAPI 实例而不是模块，
 # 需要 monkeypatch 模块级对象时必须用 importlib（与 test_simulation_and_fitting.py 同源）。
@@ -30,9 +31,8 @@ APP_MODULE = importlib.import_module("family_abm.web.app")
 
 @pytest.fixture()
 def reset_state(monkeypatch):
-    """每个用例都从「没有仿真数据」的干净状态开始（模块级状态是全局单例）。"""
-    for name in ("_sim_env", "_sim_df", "_sim_recorder", "_last_fitter"):
-        monkeypatch.setattr(APP_MODULE, name, None)
+    """每个用例都从「没有仿真数据」的干净状态开始。"""
+    monkeypatch.setattr(APP_MODULE, "_run_store", RunStore())
 
 
 @pytest.fixture()
@@ -169,12 +169,12 @@ def test_guard_maps_value_error_to_400():
 def test_success_payload_fields_unchanged(client):
     run = client.post("/api/run", json={"steps": 20})
     assert run.status_code == 200, run.text
-    assert set(run.json()) == {"status", "steps", "seed", "agents", "observations"}
+    assert set(run.json()) == {"status", "run_id", "steps", "seed", "agents", "observations"}
 
     data = client.get("/api/data")
-    assert set(data.json()) == {"agents", "columns", "data", "statistics", "steps"}
-    assert client.get("/api/niche").json().keys() == {"niches"}
-    assert client.get("/api/network").json().keys() == {"networks"}
+    assert set(data.json()) == {"run_id", "agents", "columns", "data", "statistics", "steps"}
+    assert client.get("/api/niche").json().keys() == {"run_id", "niches"}
+    assert client.get("/api/network").json().keys() == {"run_id", "networks"}
 
     records = data.json()["data"]
     households = [r for r in records if r.get("agent_type") == "Household"]
@@ -193,6 +193,30 @@ def test_missing_simulation_still_returns_400(client):
     assert client.post("/api/fit", json={}).status_code == 400
 
 
+def test_run_id_rejects_reads_from_replaced_runs(client):
+    first = client.post("/api/run", json={"steps": 1})
+    assert first.status_code == 200, first.text
+    first_id = first.json()["run_id"]
+
+    second = client.post("/api/run", json={"steps": 2})
+    assert second.status_code == 200, second.text
+    second_id = second.json()["run_id"]
+    assert first_id != second_id
+
+    for path in ("/api/data", "/api/models", "/api/niche", "/api/network"):
+        response = client.get(f"{path}?run_id={first_id}")
+        assert response.status_code == 404, (path, response.text)
+        assert response.json()["status"] == "unknown_run"
+
+    stale_fit = client.post("/api/fit", json={"model_name": "wellbeing", "run_id": first_id})
+    assert stale_fit.status_code == 404, stale_fit.text
+    assert stale_fit.json()["status"] == "unknown_run"
+
+    current = client.get(f"/api/data?run_id={second_id}")
+    assert current.status_code == 200, current.text
+    assert current.json()["run_id"] == second_id
+
+
 # ── C4：执行方式与超时 ─────────────────────────────────────────────────────
 
 def test_fit_implementation_is_sync_and_endpoint_is_async():
@@ -201,10 +225,35 @@ def test_fit_implementation_is_sync_and_endpoint_is_async():
     assert not inspect.iscoroutinefunction(APP_MODULE._api_fit_impl)
 
 
-def test_api_fit_runs_cpu_work_off_the_event_loop(monkeypatch):
+def test_api_run_runs_cpu_work_off_the_event_loop(monkeypatch):
+    def slow_run(_cfg):
+        time.sleep(0.6)
+        return JSONResponse({"status": "ok", "run_id": "stub", "steps": 1})
+
+    monkeypatch.setattr(APP_MODULE, "_api_run_impl", slow_run)
+
+    async def scenario():
+        transport = httpx.ASGITransport(app=web_app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as http:
+            run_task = asyncio.create_task(http.post("/api/run", json={"steps": 1}))
+            await asyncio.sleep(0.1)  # 让运行进入 worker 线程
+            started = time.perf_counter()
+            params = await http.get("/api/params")
+            latency = time.perf_counter() - started
+            return params, latency, await run_task
+
+    params, latency, run_response = asyncio.run(scenario())
+    assert params.status_code == 200
+    assert params.json()["defaults"]
+    assert run_response.status_code == 200 and run_response.json()["run_id"] == "stub"
+    assert latency < 0.3, f"运行期间 /api/params 延迟 {latency:.3f}s：事件循环仍被阻塞"
+
+
+def test_api_fit_runs_cpu_work_off_the_event_loop(client, monkeypatch):
+    assert client.post("/api/run", json={"steps": 1}).status_code == 200
     calls = []
 
-    def slow_impl(req):
+    def slow_impl(req, _snapshot):
         calls.append(req.model_name)
         time.sleep(0.6)
         return JSONResponse({"status": "ok", "stub": True})
@@ -230,8 +279,10 @@ def test_api_fit_runs_cpu_work_off_the_event_loop(monkeypatch):
     assert latency < 0.3, f"拟合期间 /api/params 延迟 {latency:.3f}s：事件循环仍被阻塞"
 
 
-def test_api_fit_timeout_returns_structured_504(monkeypatch):
-    def slow_impl(req):
+def test_api_fit_timeout_returns_structured_504(client, monkeypatch):
+    assert client.post("/api/run", json={"steps": 1}).status_code == 200
+
+    def slow_impl(req, _snapshot):
         time.sleep(0.5)
         return JSONResponse({"status": "ok"})
 

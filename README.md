@@ -86,6 +86,9 @@ python examples/fitting_viz_demo.py     # 拟合 + 可视化
 而不是声称"全部成立"。
 
 **一个否定的结果**（`experiments/life_stage_reducibility.py`）
+
+![可约性检验](experiments/results/life_stage_reducibility.png)
+
 常系数 ODE 无法刻画家庭聚合动力学：拟合工具本身没问题（对自生成数据 R²=1.00000），
 但对 ABM 数据只有 **0.38–0.90**（成年后窗口低至 0.08），
 差距来自模型结构与动力学的错配而非机制效应。
@@ -138,14 +141,14 @@ python -m family_abm.web
 
 右上角 ⚙ 按钮切换 **English / 简体中文**
 
-<!--
-仪表板截图：把图片放到 docs/screenshots/dashboard.png 后，
-取消下面一行的注释即可在 README 中显示。
-（原先引用的是 GitHub 附件链接，其有效性无法在仓库内验证，
- 因此改为本地路径，避免出现失效图片。）
+![仪表板总览](docs/screenshots/dashboard.png)
 
-![仪表板](docs/screenshots/dashboard.png)
--->
+![拟合页](docs/screenshots/fitting.png)
+
+![家庭关系网络](docs/screenshots/network.png)
+
+> 截图由 `tools/capture_dashboard_screenshots.py` 从当前版本生成；生境图因
+> `social_capital` 当前只有家庭层拥有而显示“缺失维度”提示。
 
 拟合页的几点说明：
 
@@ -412,15 +415,22 @@ python -m pytest tests/ -q       # 全部测试
 ruff check family_abm tests tools experiments   # 静态检查
 node tools/check_dashboard_behavior.js          # 前端行为检查（需 Node）
 
+# 真实浏览器测试与截图（需要 Playwright）
+pip install -e ".[dev,e2e]"
+python -m playwright install chromium
+RUN_BROWSER_TESTS=1 python -m pytest tests/test_browser_smoke.py -q
+python tools/capture_dashboard_screenshots.py
+
 # 重新生成基线快照（会显式暴露行为变化，改动模型后需要人工确认差异）
 python tools/baseline.py --out baseline/default_seed42.json
 
-# 重新生成研究设计文档
+# 重新生成研究设计文档与 Markdown
 python tools/build_research_doc.py
+python tools/export_research_md.py
 ```
 
 CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试，
-并额外做一次"构建 wheel → 干净环境安装 → 冒烟验证"。
+额外执行前端行为与 Chromium 冒烟测试，并做一次"构建 wheel → 干净环境安装 → 冒烟验证"。
 
 **改动的两条约定**：
 1. 任何影响默认行为的改动都要重跑 `tools/baseline.py --check`，并在提交信息里说明差异。

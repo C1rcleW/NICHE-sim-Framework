@@ -181,7 +181,7 @@ python -m family_abm.web      # 启动仪表板 → http://127.0.0.1:8520
   `test_features_nan.py`（缺失值不再填 0）、`test_experiments.py`
   （实验函数尊重 `--steps`）、`test_examples_smoke.py`（示例可跑）；
   `test_influence.py` / `test_simulation_and_fitting.py` 新增 9 项。
-  测试总数 108 → 141。
+  发布时非 packaging 测试 160 项，另有 16 项 packaging 测试。
 - `experiments/mechanism_validation.py` 与 `sensitivity_analysis.py` 的
   `e2`/`e3`/`e4` 及敏感性函数接受 `steps` 参数，可经 `--steps` 覆盖
   （含 `MIN_STEPS_FOR_STAGE_COVERAGE` 守卫），便于快速复算。

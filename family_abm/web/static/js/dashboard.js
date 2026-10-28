@@ -21,6 +21,12 @@ const I18N = {
     'setup.agents': '成员',
     'setup.family': '家庭',
     'setup.name': '名称',
+    'setup.age': '年龄',
+    'setup.required_field': '{0} 不能为空',
+    'setup.number_invalid': '{0} 必须是有效数字',
+    'setup.integer_invalid': '{0} 必须是整数',
+    'setup.range_invalid': '{0} 必须在 {1} 到 {2} 之间',
+    'setup.params_failed': '无法加载参数配置。',
     'setup.kpi_steps': '步数',
     'setup.kpi_agents': '智能体',
     'setup.kpi_records': '记录条数',
@@ -40,6 +46,11 @@ const I18N = {
     'fitting.none_available': '当前数据下没有可直接拟合的模型（可用状态列过少或全为常量）。',
     'fitting.models_failed': '无法获取模型列表（/api/models 请求失败）。',
     'charts.niche': '生境空间',
+    'charts.niche_no_points': '没有可绘制的生境点：经济或社会维度缺失。',
+    'charts.niche_missing_dims': '缺失维度：{0}；缺少坐标的成员不会被绘制。',
+    'charts.niche_clipped_dims': '以下原始值被截断到 [0,1]：{0}；原始值见 /api/niche。',
+    'charts.plotly_failed': 'Plotly 未能加载，图表不可用；请检查网络或改用离线版资源。',
+    'network.failed': '家庭关系网络加载失败。',
     'fitting.warn': '请先运行仿真，然后选择模型进行拟合。',
     'fitting.title': 'ODE模型拟合（兰彻斯特型）',
     'fitting.model': '模型',
@@ -47,6 +58,8 @@ const I18N = {
     'fitting.aggregate': '— 聚合 —',
     'fitting.run': '拟合模型',
     'fitting.result': '拟合结果',
+    'fitting.state_metrics': '分状态诊断',
+    'fitting.rmse': 'RMSE',
     'fitting.chart': 'ABM数据 vs ODE拟合',
     'fitting.converged_yes': '是',
     'fitting.converged_no': '否',
@@ -59,16 +72,22 @@ const I18N = {
     'setup.reset_params': '恢复默认',
     'param.Education': '教育', 'param.Income': '收入', 'param.Health': '健康',
     'param.Stress': '压力', 'param.Happiness': '幸福', 'param.Noise': '随机扰动',
+    'param.Family Support': '家庭支持', 'param.Influence Shape': '影响曲线',
     'param.education_rate': '学习速率', 'param.income_base': '基础收入',
     'param.income_edu_boost': '教育加成', 'param.income_age_peak': '收入峰值年龄',
-    'param.income_age_spread': '年龄跨度', 'param.health_decay_base': '基础衰减',
-    'param.health_decay_age': '年龄衰减', 'param.health_edu_protection': '教育保护',
+    'param.income_age_spread': '年龄跨度', 'param.health_floor': '健康下限',
+    'param.health_decay_rate': '健康衰减率', 'param.health_edu_protection': '教育保护',
     'param.stress_base': '基础压力', 'param.stress_work_add': '工作压力',
     'param.stress_decay': '衰减速率', 'param.stress_neuro_sensitivity': '神经质敏感',
+    'param.stress_pressure_gain': '经济压力传导', 'param.income_baseline': '收入基准',
     'param.happiness_baseline': '基础值', 'param.happiness_health_weight': '健康权重',
     'param.happiness_income_weight': '收入权重', 'param.happiness_edu_weight': '教育权重',
     'param.happiness_stress_penalty': '压力惩罚', 'param.happiness_recovery': '恢复速率',
     'param.randomness': '扰动强度',
+    'param.influence_strength': '影响强度', 'param.income_support': '收入支持',
+    'param.use_life_stage_susceptibility': '阶段易感性',
+    'param.role_switch': '成年角色切换',
+    'param.susceptibility_scale': '易感性缩放', 'param.stage_shift_years': '阶段平移（年）',
     'chart.agent_series': '智能体状态时间序列',
     'chart.time': '时间',
     'chart.value': '数值',
@@ -98,6 +117,12 @@ const I18N = {
     'setup.agents': 'Agents',
     'setup.family': 'Family',
     'setup.name': 'Name',
+    'setup.age': 'Age',
+    'setup.required_field': '{0} is required',
+    'setup.number_invalid': '{0} must be a valid number',
+    'setup.integer_invalid': '{0} must be an integer',
+    'setup.range_invalid': '{0} must be between {1} and {2}',
+    'setup.params_failed': 'Could not load parameter configuration.',
     'setup.kpi_steps': 'Steps',
     'setup.kpi_agents': 'Agents',
     'setup.kpi_records': 'Records',
@@ -117,6 +142,11 @@ const I18N = {
     'fitting.none_available': 'No directly fittable model for the current data (too few usable state columns, or all are constant).',
     'fitting.models_failed': 'Could not load the model list (/api/models failed).',
     'charts.niche': 'Niche Space',
+    'charts.niche_no_points': 'No niche points to plot: the economic or social dimension is missing.',
+    'charts.niche_missing_dims': 'Missing dimensions: {0}; members without a coordinate are not plotted.',
+    'charts.niche_clipped_dims': 'Raw values clipped to [0,1]: {0}; see /api/niche for raw values.',
+    'charts.plotly_failed': 'Plotly failed to load; charts are unavailable. Check the network or use local assets.',
+    'network.failed': 'Could not load family networks.',
     'fitting.warn': 'Run a simulation first, then select a model to fit.',
     'fitting.title': 'ODE Model Fitting (Lanchester-type)',
     'fitting.model': 'Model',
@@ -124,6 +154,8 @@ const I18N = {
     'fitting.aggregate': '— Aggregate —',
     'fitting.run': 'Fit Model',
     'fitting.result': 'Fit Result',
+    'fitting.state_metrics': 'Per-state diagnostics',
+    'fitting.rmse': 'RMSE',
     'fitting.chart': 'ABM Data vs ODE Fit',
     'fitting.converged_yes': 'Yes',
     'fitting.converged_no': 'No',
@@ -136,16 +168,23 @@ const I18N = {
     'setup.reset_params': 'Reset Defaults',
     'param.Education': 'Education', 'param.Income': 'Income', 'param.Health': 'Health',
     'param.Stress': 'Stress', 'param.Happiness': 'Happiness', 'param.Noise': 'Noise',
+    'param.Family Support': 'Family Support', 'param.Influence Shape': 'Influence Shape',
     'param.education_rate': 'Learn Rate', 'param.income_base': 'Base Income',
     'param.income_edu_boost': 'Edu Boost', 'param.income_age_peak': 'Peak Age',
-    'param.income_age_spread': 'Age Spread', 'param.health_decay_base': 'Base Decay',
-    'param.health_decay_age': 'Age Decay', 'param.health_edu_protection': 'Edu Protection',
+    'param.income_age_spread': 'Age Spread', 'param.health_floor': 'Health Floor',
+    'param.health_decay_rate': 'Health Decay', 'param.health_edu_protection': 'Edu Protection',
     'param.stress_base': 'Base Load', 'param.stress_work_add': 'Work Add',
     'param.stress_decay': 'Decay Rate', 'param.stress_neuro_sensitivity': 'Neuro Sens',
+    'param.stress_pressure_gain': 'Pressure Gain', 'param.income_baseline': 'Income Baseline',
     'param.happiness_baseline': 'Baseline', 'param.happiness_health_weight': 'Health Wt',
     'param.happiness_income_weight': 'Income Wt', 'param.happiness_edu_weight': 'Edu Wt',
     'param.happiness_stress_penalty': 'Stress Pen', 'param.happiness_recovery': 'Recovery',
     'param.randomness': 'Noise Level',
+    'param.influence_strength': 'Influence Strength', 'param.income_support': 'Income Support',
+    'param.use_life_stage_susceptibility': 'Life-stage Susceptibility',
+    'param.role_switch': 'Adult Role Switch',
+    'param.susceptibility_scale': 'Susceptibility Scale',
+    'param.stage_shift_years': 'Stage Shift (years)',
     'chart.agent_series': 'Agent State Time Series',
     'chart.time': 'Time',
     'chart.value': 'Value',
@@ -172,6 +211,12 @@ function refreshI18n() {
     const key = el.getAttribute('data-i18n');
     el.textContent = t(key);
   });
+  document.querySelectorAll('.family-card').forEach(card => {
+    const name = card.dataset.familyName;
+    const heading = card.querySelector('h3');
+    if (name && heading) heading.textContent = `${name} ${t('setup.family')}`;
+  });
+  refreshStatusI18n();
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     el.title = t(el.getAttribute('data-i18n-title'));
   });
@@ -195,11 +240,27 @@ function setLang(lang) {
   currentLang = lang;
   localStorage.setItem(LANG_KEY, lang);
   refreshI18n();
-  if (simData) buildCharts();
+  if (!simData) return;
+
+  buildAgentList();
+  buildCharts();
+  const activeTab = document.querySelector('.tab-content.active');
+  if (activeTab && activeTab.id === 'tab-fitting') {
+    buildFittingView();
+    loadModelInfo();
+    if (lastFitResult) renderFitResult(lastFitResult, lastFitModel);
+  } else if (activeTab && activeTab.id === 'tab-network') {
+    buildNetwork();
+  }
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
 let simData = null;
+let simRunId = null;
+let _runSeq = 0;
+let lastFitResult = null;
+let lastFitModel = null;
+let statusInfo = { state: 'ready', message: null, kind: null, r2: null };
 const CHART_THEME = {
   paper_bgcolor: '#fff', plot_bgcolor: '#f8fafc',
   font: { family: '-apple-system,BlinkMacSystemFont,sans-serif', size: 11 },
@@ -220,7 +281,14 @@ document.querySelectorAll('#tabNav button').forEach(btn => {
 
 function onTabSwitch(tab) {
   if (tab === 'charts' && simData) buildCharts();
-  if (tab === 'fitting' && simData) buildFittingView();
+  if (tab === 'fitting' && simData) {
+    buildFittingView();
+    if (lastFitResult) {
+      document.getElementById('fitResultCard').style.display = 'block';
+      document.getElementById('fitChartCard').style.display = 'block';
+      renderFitResult(lastFitResult, lastFitModel);
+    }
+  }
   if (tab === 'network' && simData) buildNetwork();
 }
 
@@ -243,44 +311,102 @@ document.addEventListener('click', () => {
 async function api(url, opts = {}) {
   try {
     const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
-    return await res.json();
+    let payload;
+    try {
+      payload = await res.json();
+    } catch (_err) {
+      return { error: `HTTP ${res.status}: invalid JSON response` };
+    }
+    if (!res.ok && (!payload || typeof payload !== 'object')) {
+      return { error: `HTTP ${res.status}` };
+    }
+    if (!res.ok && !payload.error) {
+      payload.error = `HTTP ${res.status}`;
+    }
+    return payload;
   } catch (e) {
     return { error: e.message || 'Network error' };
   }
 }
 
+function hasPlotly() {
+  return typeof Plotly !== 'undefined';
+}
+
+function showPlotlyFailure(containerId) {
+  const el = document.getElementById(containerId);
+  if (el) el.textContent = t('charts.plotly_failed');
+}
+
+function withRunId(url, runId = simRunId) {
+  if (!runId) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}run_id=${encodeURIComponent(runId)}`;
+}
+
+function clearRunView() {
+  simData = null;
+  simRunId = null;
+  selAgentId = null;
+  modelInfo = {};
+  modelInfoAgentId = null;
+  modelInfoRunId = null;
+  lastFitResult = null;
+  lastFitModel = null;
+  fitModelTouched = false;
+  _modelInfoSeq += 1;
+  _fitSeq += 1;
+  ['resultCard', 'agentSelectCard', 'timeseriesCard', 'nicheCard', 'fitResultCard', 'fitChartCard'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  ['chartTimeSeries', 'chartNiche', 'chartFit'].forEach(id => {
+    if (typeof Plotly !== 'undefined') Plotly.purge(id);
+  });
+  const networks = document.getElementById('networkCards');
+  if (networks) networks.innerHTML = '';
+}
+
 // ── Parameters ─────────────────────────────────────────────────────────────
 let paramDefaults = {};
 let paramGroups = {};
+let paramSpecs = {};
+let simLimits = {};
 
 async function loadParams() {
   const res = await api('/api/params');
-  if (res.defaults) paramDefaults = res.defaults;
-  if (res.groups) paramGroups = res.groups;
+  if (res.error || !res.defaults) {
+    setStatus('error', res.error || t('setup.params_failed'));
+    return;
+  }
+  paramDefaults = res.defaults;
+  paramGroups = res.groups || {};
+  paramSpecs = res.specs || {};
+  simLimits = res.limits || {};
+  applySimulationLimits();
   buildParams();
+}
+
+function applySimulationLimits() {
+  const steps = document.getElementById('simSteps');
+  const limit = simLimits.steps;
+  if (!steps || !limit) return;
+  steps.min = limit.min;
+  steps.max = limit.max;
 }
 
 function buildParams() {
   const container = document.getElementById('paramGroups');
   let html = '';
-  const enLabels = {
-    'Education': 'Education', 'Income': 'Income', 'Health': 'Health',
-    'Stress': 'Stress', 'Happiness': 'Happiness', 'Noise': 'Noise',
-    'education_rate': 'Learn Rate', 'income_base': 'Base Income', 'income_edu_boost': 'Edu Boost',
-    'income_age_peak': 'Peak Age', 'income_age_spread': 'Age Spread', 'health_decay_base': 'Base Decay',
-    'health_decay_age': 'Age Decay', 'health_edu_protection': 'Edu Protection', 'stress_base': 'Base Load',
-    'stress_work_add': 'Work Add', 'stress_decay': 'Decay Rate', 'stress_neuro_sensitivity': 'Neuro Sens',
-    'happiness_baseline': 'Baseline', 'happiness_health_weight': 'Health Wt', 'happiness_income_weight': 'Income Wt',
-    'happiness_edu_weight': 'Edu Wt', 'happiness_stress_penalty': 'Stress Pen', 'happiness_recovery': 'Recovery',
-    'randomness': 'Noise Level',
-  };
   Object.entries(paramGroups).forEach(([group, keys]) => {
-    html += `<div class="param-group"><h4 class="param-group-title" data-i18n="param.${group}">${group}</h4><div class="param-items">`;
+    html += `<div class="param-group"><h4 class="param-group-title" data-i18n="param.${group}">${t('param.' + group)}</h4><div class="param-items">`;
     keys.forEach(key => {
       const val = paramDefaults[key] !== undefined ? paramDefaults[key] : 0;
+      const spec = paramSpecs[key] || { min: 0, max: 5, step: 0.001, type: 'number' };
+      const step = spec.type === 'switch' ? 1 : spec.step;
       html += `<div class="param-item">
-        <label data-i18n="param.${key}">${enLabels[key] || key}</label>
-        <input type="number" class="param-input" data-param="${key}" value="${val}" step="0.001" min="0" max="5">
+        <label data-i18n="param.${key}">${t('param.' + key)}</label>
+        <input type="number" class="param-input" data-param="${key}" value="${val}" step="${step}" min="${spec.min}" max="${spec.max}">
       </div>`;
     });
     html += `</div></div>`;
@@ -288,10 +414,28 @@ function buildParams() {
   container.innerHTML = html;
 }
 
+function readNumberInput(input, label, { min, max, integer = false } = {}) {
+  const raw = input ? String(input.value).trim() : '';
+  if (raw === '') throw new Error(t('setup.required_field', label));
+  const value = Number(raw);
+  if (!Number.isFinite(value)) throw new Error(t('setup.number_invalid', label));
+  if (integer && !Number.isInteger(value)) throw new Error(t('setup.integer_invalid', label));
+  if ((min !== undefined && value < min) || (max !== undefined && value > max)) {
+    throw new Error(t('setup.range_invalid', label, min, max));
+  }
+  return value;
+}
+
 function getParams() {
   const params = {};
   document.querySelectorAll('.param-input').forEach(inp => {
-    params[inp.dataset.param] = parseFloat(inp.value) || 0;
+    const key = inp.dataset.param;
+    const spec = paramSpecs[key] || { min: 0, max: 5, type: 'number' };
+    params[key] = readNumberInput(inp, t('param.' + key), {
+      min: spec.min,
+      max: spec.max,
+      integer: spec.type === 'switch',
+    });
   });
   return params;
 }
@@ -320,11 +464,11 @@ function buildFamilyConfigs() {
   const container = document.getElementById('familyConfigs');
   let html = '';
   defaultFamilies.forEach((f, fi) => {
-    html += `<div class="family-card"><h3>${f.name} ${t('setup.family')}</h3>`;
+    html += `<div class="family-card" data-family-name="${f.name}"><h3>${f.name} ${t('setup.family')}</h3>`;
     f.members.forEach((m, mi) => {
       html += `<div class="member-line">
         <input value="${m.name}" data-fam="${fi}" data-mem="${mi}" data-key="name" placeholder="${t('setup.name')}">
-        <input type="number" value="${m.age}" data-fam="${fi}" data-mem="${mi}" data-key="age" min="0" style="width:60px">
+        <input type="number" value="${m.age}" data-fam="${fi}" data-mem="${mi}" data-key="age" min="0" max="120" style="width:60px">
         <select data-fam="${fi}" data-mem="${mi}" data-key="gender">
           <option ${m.gender==='male'?'selected':''}>male</option>
           <option ${m.gender==='female'?'selected':''}>female</option>
@@ -345,15 +489,14 @@ function buildFamilyConfigs() {
 function getFamilyConfigs() {
   const families = [];
   document.querySelectorAll('.family-card').forEach(card => {
-    const h3 = card.querySelector('h3').textContent;
-    const name = h3.replace(' ' + t('setup.family'), '');
+    const name = card.dataset.familyName;
     const members = [];
     card.querySelectorAll('.member-line').forEach(line => {
       const inputs = line.querySelectorAll('input');
       const selects = line.querySelectorAll('select');
       members.push({
         name: inputs[0].value,
-        age: parseFloat(inputs[1].value) || 25,
+        age: readNumberInput(inputs[1], t('setup.age'), { min: 0, max: 120 }),
         gender: selects[0].value,
         role_name: selects[1].value,
       });
@@ -364,40 +507,67 @@ function getFamilyConfigs() {
 }
 
 async function runSimulation() {
-  setStatus('running', t('status.running'));
-  const cfg = {
-    steps: parseInt(document.getElementById('simSteps').value) || 120,
-    // 随机种子：同一配置 + 同一种子可复现（含智能体初始化）
-    seed: parseInt(document.getElementById('simSeed').value, 10),
-    params: getParams(),
-    families: getFamilyConfigs(),
-  };
-  const res = await api('/api/run', { method: 'POST', body: JSON.stringify(cfg) });
-  if (res.error) { setStatus('error', res.error); return; }
+  const runBtn = document.getElementById('runSimBtn');
+  if (runBtn) runBtn.disabled = true;
+  setStatus('running', t('status.running'), { kind: 'simRunning' });
+  try {
+    let cfg;
+    try {
+      const stepLimit = simLimits.steps || { min: 0, max: 5000 };
+      cfg = {
+        steps: readNumberInput(
+          document.getElementById('simSteps'), t('setup.steps'),
+          { min: stepLimit.min, max: stepLimit.max, integer: true },
+        ),
+        // 随机种子：同一配置 + 同一种子可复现（含智能体初始化）
+        seed: readNumberInput(
+          document.getElementById('simSeed'), t('setup.seed'),
+          { min: 0, max: 999999, integer: true },
+        ),
+        params: getParams(),
+        families: getFamilyConfigs(),
+      };
+    } catch (err) {
+      setStatus('error', err.message);
+      return;
+    }
 
-  const data = await api('/api/data');
-  if (data.error) { setStatus('error', data.error); return; }
-  simData = data;
+    const seq = ++_runSeq;
+    clearRunView();
+    const res = await api('/api/run', { method: 'POST', body: JSON.stringify(cfg) });
+    if (seq !== _runSeq) return;
+    if (res.error) { setStatus('error', res.error); return; }
 
-  document.getElementById('resultCard').style.display = 'block';
-  document.getElementById('agentSelectCard').style.display = 'block';
-  document.getElementById('resultKPIs').innerHTML = `
-    <div class="result-kpi"><div class="value">${res.steps}</div><div class="label">${t('setup.kpi_steps')}</div></div>
-    <div class="result-kpi"><div class="value">${res.agents}</div><div class="label">${t('setup.kpi_agents')}</div></div>
-    <div class="result-kpi"><div class="value">${res.observations}</div><div class="label">${t('setup.kpi_records')}</div></div>
-  `;
+    const runId = res.run_id || null;
+    simRunId = runId;
+    const data = await api(withRunId('/api/data', runId));
+    if (seq !== _runSeq) return;
+    if (data.error) { setStatus('error', data.error); return; }
+    simData = data;
 
-  buildAgentList();
-  // 至少一个模型可拟合才算真正可用；全禁用时状态栏必须说明原因，
-  // 不能被下面那句"仿真完成"覆盖（复核指出这正是原因说明不可见的原因）。
-  const infoState = await loadModelInfo();
-  if (infoState === 'ready') {
-    setStatus('ok', t('status.simDone'));
-  } else if (infoState === 'none') {
-    setStatus('error', t('fitting.none_available'));
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('agentSelectCard').style.display = 'block';
+    document.getElementById('resultKPIs').innerHTML = `
+      <div class="result-kpi"><div class="value">${res.steps}</div><div class="label">${t('setup.kpi_steps')}</div></div>
+      <div class="result-kpi"><div class="value">${res.agents}</div><div class="label">${t('setup.kpi_agents')}</div></div>
+      <div class="result-kpi"><div class="value">${res.observations}</div><div class="label">${t('setup.kpi_records')}</div></div>
+    `;
+
+    buildAgentList();
+    // 至少一个模型可拟合才算真正可用；全禁用时状态栏必须说明原因，
+    // 不能被下面那句"仿真完成"覆盖（复核指出这正是原因说明不可见的原因）。
+    const infoState = await loadModelInfo();
+    if (seq !== _runSeq) return;
+    if (infoState === 'ready') {
+      setStatus('ok', t('status.simDone'), { kind: 'simDone' });
+    } else if (infoState === 'none') {
+      setStatus('error', t('fitting.none_available'));
+    }
+    // 'error' 分支已由 loadModelInfo 写过状态；'stale' 说明有更新的加载在进行，交给它收尾
+    document.querySelector('#tabNav button[data-tab="charts"]').click();
+  } finally {
+    if (runBtn) runBtn.disabled = false;
   }
-  // 'error' 分支已由 loadModelInfo 写过状态；'stale' 说明有更新的加载在进行，交给它收尾
-  document.querySelector('#tabNav button[data-tab="charts"]').click();
 }
 
 // 模型可映射性：抽象模型（square_law/influence/...）的状态名与 ABM 列名没有默认
@@ -405,8 +575,11 @@ async function runSimulation() {
 // 导致 7 个模型里有 6 个在界面上永远返回 400。
 let modelInfo = {};
 let modelInfoAgentId = null;   // 当前 modelInfo 是按哪个 agent 评估的
+let modelInfoRunId = null;     // 当前 modelInfo 属于哪个运行
+let fitModelTouched = false;   // 用户是否主动选择过模型
 let _modelInfoSeq = 0;         // 请求序号：丢弃乱序返回的陈旧响应
 let _modelInfoDebounce = null;
+let _fitSeq = 0;
 
 /**
  * 按当前选中的 agent 拉取模型可拟合性，并渲染模型下拉。
@@ -421,18 +594,23 @@ async function loadModelInfo() {
   // 拟合到单个 agent 时用的是该 agent 自己的序列，
   // "整体有变化但该 agent 恒定"的列必须按子集重新判定。
   const seq = ++_modelInfoSeq;
+  const requestedRunId = simRunId;
   const agentSel = document.getElementById('fitAgent');
   const agentId = agentSel ? (agentSel.value || '') : '';
+  const query = [];
+  if (agentId) query.push(`agent_id=${encodeURIComponent(agentId)}`);
+  if (requestedRunId) query.push(`run_id=${encodeURIComponent(requestedRunId)}`);
+  const qs = query.join('&');
   let res;
   try {
-    res = await api('/api/models' + (agentId ? `?agent_id=${encodeURIComponent(agentId)}` : ''));
+    res = await api('/api/models' + (qs ? `?${qs}` : ''));
   } catch (err) {
     if (seq !== _modelInfoSeq) return 'stale';
     setStatus('error', String(err));
     return 'error';
   }
-  // 期间又发起了更新的请求：本次结果已陈旧，直接丢弃（不要写成"不可拟合"）
-  if (seq !== _modelInfoSeq) return 'stale';
+  // 期间又发起了更新的请求或运行：本次结果已陈旧，直接丢弃。
+  if (seq !== _modelInfoSeq || requestedRunId !== simRunId) return 'stale';
   if (res.error || !res.models) {
     setStatus('error', res.error || t('fitting.models_failed'));
     return 'error';
@@ -440,8 +618,10 @@ async function loadModelInfo() {
   modelInfo = {};
   res.models.forEach(m => { modelInfo[m.name] = m; });
   modelInfoAgentId = agentId;
+  modelInfoRunId = requestedRunId;
 
   const sel = document.getElementById('fitModel');
+  const previousSelection = sel.value;
   const options = res.models.map(m => {
     // 无法直接映射、且候选列不足以自动给出映射的模型：置灰不可选。
     // 此前只标注"需人工指定"但页面上没有映射输入控件，等于给用户一个死路。
@@ -457,7 +637,14 @@ async function loadModelInfo() {
   });
   sel.innerHTML = options.join('');
   const preferred = ['wellbeing', 'influence', 'logistic', 'square_law', 'linear_law', 'lotka_volterra', 'resource_competition'];
-  const pick = preferred.find(n => modelInfo[n] && !modelInfo[n].needs_manual_mapping);
+  const previous = modelInfo[previousSelection];
+  const keepPrevious = previousSelection
+    && previous
+    && !previous.needs_manual_mapping
+    && (fitModelTouched || previous.directly_fittable);
+  const pick = keepPrevious
+    ? previousSelection
+    : preferred.find(n => modelInfo[n] && !modelInfo[n].needs_manual_mapping);
   if (pick) sel.value = pick;
 
   // 全部模型都不可用时：下拉会停在空值，此时必须禁用拟合按钮并说明原因，
@@ -495,13 +682,32 @@ function currentStateMapping(modelName) {
 function buildAgentList() {
   if (!simData) return;
   const list = document.getElementById('agentsList');
-  list.innerHTML = simData.agents.map(a =>
-    `<span class="agent-chip" data-id="${a.id}" onclick="selAgent(this,'${a.id}')">${a.name} (${a.role})</span>`
-  ).join('');
+  list.innerHTML = '';
+  simData.agents.forEach(a => {
+    const chip = document.createElement('span');
+    chip.className = 'agent-chip' + (selAgentId === a.id ? ' sel' : '');
+    chip.dataset.id = a.id;
+    chip.textContent = `${a.name} (${a.role})`;
+    chip.addEventListener('click', () => selAgent(chip, a.id));
+    list.appendChild(chip);
+  });
 
   const sel = document.getElementById('fitAgent');
-  sel.innerHTML = `<option value="">${t('fitting.aggregate')}</option>` +
-    simData.agents.map(a => `<option value="${a.id}">${a.name} (${a.role})</option>`).join('');
+  const previousAgent = sel.value;
+  sel.innerHTML = '';
+  const aggregate = document.createElement('option');
+  aggregate.value = '';
+  aggregate.textContent = t('fitting.aggregate');
+  sel.appendChild(aggregate);
+  simData.agents.forEach(a => {
+    const option = document.createElement('option');
+    option.value = a.id;
+    option.textContent = `${a.name} (${a.role})`;
+    sel.appendChild(option);
+  });
+  if (previousAgent && Array.from(sel.options).some(o => o.value === previousAgent)) {
+    sel.value = previousAgent;
+  }
   // 拟合对象变化会改变"哪些状态列有变化"，需要重新评估模型可拟合性
   sel.onchange = () => { scheduleLoadModelInfo(); };
 }
@@ -517,7 +723,17 @@ function selAgent(el, id) {
 // ── Charts ─────────────────────────────────────────────────────────────────
 function buildCharts() {
   const warn = document.getElementById('chartWarning');
-  if (!simData) { warn.style.display = 'block'; return; }
+  if (!simData) {
+    warn.textContent = t('charts.warn');
+    warn.style.display = 'block';
+    return;
+  }
+  if (!hasPlotly()) {
+    warn.textContent = t('charts.plotly_failed');
+    warn.style.display = 'block';
+    return;
+  }
+  warn.textContent = '';
   warn.style.display = 'none';
 
   document.getElementById('timeseriesCard').style.display = 'block';
@@ -528,6 +744,10 @@ function buildCharts() {
 }
 
 function buildTimeSeries() {
+  if (!hasPlotly()) {
+    showPlotlyFailure('chartTimeSeries');
+    return;
+  }
   const df = simData.data;
   let series = df;
   if (selAgentId) series = series.filter(r => r.agent_id === selAgentId);
@@ -562,16 +782,49 @@ function buildTimeSeries() {
 }
 
 async function buildNicheChart() {
-  const res = await api('/api/niche');
-  if (res.error || !res.niches) return;
+  const warningEl = document.getElementById('nicheWarning');
+  const chartEl = document.getElementById('chartNiche');
+  const requestRunId = simRunId;
+  const res = await api(withRunId('/api/niche', requestRunId));
+  if (requestRunId !== simRunId) return;
+  if (!hasPlotly()) {
+    warningEl.textContent = t('charts.plotly_failed');
+    warningEl.style.display = 'block';
+    chartEl.textContent = '';
+    return;
+  }
+  if (res.error || !res.niches) {
+    if (hasPlotly()) Plotly.purge('chartNiche');
+    chartEl.textContent = '';
+    warningEl.textContent = res.error || t('charts.niche_no_points');
+    warningEl.style.display = 'block';
+    return;
+  }
+
+  const valid = res.niches.filter(n =>
+    n.position && Number.isFinite(n.position.economic) && Number.isFinite(n.position.social)
+  );
+  const missing = [...new Set(res.niches.flatMap(n => n.missing_dimensions || []))];
+  const clipped = [...new Set(res.niches.flatMap(n => n.clipped_dimensions || []))];
+  const warnings = [];
+  if (missing.length) warnings.push(t('charts.niche_missing_dims', missing.join(', ')));
+  if (clipped.length) warnings.push(t('charts.niche_clipped_dims', clipped.join(', ')));
+  warningEl.textContent = warnings.join(' ');
+  warningEl.style.display = warnings.length ? 'block' : 'none';
+
+  if (!valid.length) {
+    Plotly.purge('chartNiche');
+    chartEl.innerHTML = `<div class="loading">${t('charts.niche_no_points')}</div>`;
+    return;
+  }
 
   const roleColors = { parent: '#e74c3c', child: '#3498db', adult: '#f39c12', elder: '#2ecc71' };
   const traces = [{
-    x: res.niches.map(n => n.position.economic || 0),
-    y: res.niches.map(n => n.position.social || 0),
-    text: res.niches.map(n => n.name),
+    x: valid.map(n => n.position.economic),
+    y: valid.map(n => n.position.social),
+    text: valid.map(n => n.name),
     type: 'scatter', mode: 'markers+text', textposition: 'top center',
-    marker: { size: 14, color: res.niches.map(n => roleColors[n.role] || '#95a5a6'), line: { width: 1, color: '#fff' } },
+    marker: { size: 14, color: valid.map(n => roleColors[n.role] || '#95a5a6'), line: { width: 1, color: '#fff' } },
   }];
   Plotly.newPlot('chartNiche', traces, {
     ...CHART_THEME, title: t('chart.niche_title'),
@@ -592,7 +845,7 @@ function buildFittingView() {
   // 若模型信息属于别的 agent（防抖未落定或曾失败），在此补一次加载
   const agentSel = document.getElementById('fitAgent');
   const selectedAgent = agentSel ? (agentSel.value || '') : '';
-  if (modelInfoAgentId !== selectedAgent) {
+  if (modelInfoAgentId !== selectedAgent || modelInfoRunId !== simRunId) {
     loadModelInfo().then((state) => {
       if (state === 'none') setStatus('error', t('fitting.none_available'));
     });
@@ -600,18 +853,29 @@ function buildFittingView() {
 }
 
 async function runFitting() {
-  setStatus('running', t('status.fitting'));
+  const fitBtn = document.getElementById('fitRunBtn');
+  if (fitBtn) fitBtn.disabled = true;
+  try {
+    await _runFittingImpl();
+  } finally {
+    if (fitBtn) fitBtn.disabled = fitSelectionBlocked();
+  }
+}
+
+async function _runFittingImpl() {
+  setStatus('running', t('status.fitting'), { kind: 'fitRunning' });
+  const fitSeq = ++_fitSeq;
+  const requestRunId = simRunId;
   const agentSel = document.getElementById('fitAgent');
   const selectedAgent = agentSel ? (agentSel.value || '') : '';
 
-  // 防抖意味着"切换 agent 后立刻点拟合"时，modelInfo 可能仍属于上一个 agent，
-  // 此时 state_mapping 会指向错误 agent 的列（实测复现：
-  // {"agent_id":"B","state_mapping":{"population":"state_from_A"}}）。
-  // 这里按需同步重载，确保映射与 agent 一致。
-  if (modelInfoAgentId !== selectedAgent) {
+  // 防抖意味着"切换 agent/运行后立刻点拟合"时，modelInfo 可能仍属于旧状态，
+  // 此时 state_mapping 会指向错误的数据列。这里按需同步重载。
+  if (modelInfoAgentId !== selectedAgent || modelInfoRunId !== requestRunId) {
     const state = await loadModelInfo();
+    if (fitSeq !== _fitSeq || requestRunId !== simRunId) return;
     if (state === 'stale') return;
-    if (modelInfoAgentId !== selectedAgent) {
+    if (modelInfoAgentId !== selectedAgent || modelInfoRunId !== requestRunId) {
       if (state === 'none') setStatus('error', t('fitting.none_available'));
       return;
     }
@@ -630,15 +894,36 @@ async function runFitting() {
     return;
   }
 
+  lastFitResult = null;
+  lastFitModel = null;
+  document.getElementById('fitResultCard').style.display = 'none';
+  document.getElementById('fitChartCard').style.display = 'none';
+
   const res = await api('/api/fit', {
     method: 'POST',
-    body: JSON.stringify({ model_name: model, agent_id: agent, robust: true, state_mapping: mapping }),
+    body: JSON.stringify({
+      model_name: model,
+      agent_id: agent,
+      robust: true,
+      run_id: requestRunId,
+      state_mapping: mapping,
+    }),
   });
+  if (fitSeq !== _fitSeq || requestRunId !== simRunId) return;
   if (res.error) { setStatus('error', res.error); return; }
 
   document.getElementById('fitResultCard').style.display = 'block';
   document.getElementById('fitChartCard').style.display = 'block';
+  lastFitResult = res;
+  lastFitModel = model;
+  renderFitResult(res, model);
 
+  const r2val = res.summary.r_squared !== null ? res.summary.r_squared.toFixed(4) : '\u2014';
+  setStatus('ok', t('status.fitDone', r2val), { kind: 'fitDone', r2: r2val });
+}
+
+function renderFitResult(res, model) {
+  if (!res || !res.summary) return;
   const s = res.summary;
   // 告警必须可见：贴边参数表示该方向可能不可辨识；哨兵命中表示解本身无效。
   const warnings = [];
@@ -658,13 +943,25 @@ async function runFitting() {
   if (r2NonPositive) {
     warnings.push(t('fitting.warn_r2_nonpositive'));
   }
-  // 实际使用的状态列：后端已返回 state_columns（形如 {R1: 'state_x', R2: 'state_y'}
-  // 的**对象**，不是数组），但前端此前 0 处引用，用户无从判断究竟拟合了哪两个变量。
+  // 实际使用的状态列：后端已返回 state_columns 对象，用户需要看到究竟拟合了哪些变量。
   const usedCols = res.state_columns && typeof res.state_columns === 'object'
     ? Object.values(res.state_columns).join(', ')
     : '';
   const colsLine = usedCols
     ? `<div class="fit-columns">${t('fitting.uses_columns', usedCols)}</div>`
+    : '';
+  const perState = s.per_state && typeof s.per_state === 'object'
+    ? Object.entries(s.per_state)
+    : [];
+  const perStateLine = perState.length
+    ? `<div class="fit-metrics"><div class="fit-metrics-title">${t('fitting.state_metrics')}</div>`
+      + perState.map(([state, metric]) => {
+        const r2 = typeof metric.r_squared === 'number' ? metric.r_squared.toFixed(4) : '\u2014';
+        const rmse = typeof metric.rmse === 'number' ? metric.rmse.toFixed(4) : '\u2014';
+        return `<div class="fit-metric"><span class="key">${state}${metric.column ? ` (${metric.column})` : ''}</span>`
+          + ` R<sup>2</sup>=${r2} ${t('fitting.rmse')}=${rmse} n=${metric.n ?? '\u2014'}</div>`;
+      }).join('')
+      + '</div>'
     : '';
   // R² 非正时不能把 Converged 作为独立的"通过"指标并排展示
   const convergedText = r2NonPositive
@@ -673,30 +970,39 @@ async function runFitting() {
   document.getElementById('fitKPIs').innerHTML = `
     <div class="result-kpi"><div class="value">${s.r_squared !== null ? s.r_squared.toFixed(4) : '\u2014'}</div><div class="label">R^2</div></div>
     <div class="result-kpi${r2NonPositive ? ' muted' : ''}"><div class="value">${convergedText}</div><div class="label">Converged</div></div>
-  ` + colsLine + (warnings.length
+  ` + colsLine + perStateLine + (warnings.length
     ? `<div class="fit-warning">${warnings.map(w => `<div>\u26a0 ${w}</div>`).join('')}</div>`
     : '');
-  document.getElementById('fitParams').innerHTML = Object.entries(s.params).map(([k, v]) =>
+  document.getElementById('fitParams').innerHTML = Object.entries(s.params || {}).map(([k, v]) =>
     `<span class="fit-param"><span class="key">${k}</span> <span class="val">${typeof v === 'number' ? v.toFixed(4) : v}</span></span>`
   ).join('');
 
   buildFitChart(res);
-  const r2val = s.r_squared !== null ? s.r_squared.toFixed(4) : '\u2014';
-  setStatus('ok', t('status.fitDone', r2val));
 }
 
 function buildFitChart(res) {
   if (!simData) return;
+  if (!hasPlotly()) {
+    showPlotlyFailure('chartFit');
+    return;
+  }
   const df = simData.data;
   const agentId = document.getElementById('fitAgent').value || null;
   let series = df;
   if (agentId) series = series.filter(r => r.agent_id === agentId);
 
-  const predTraces = res.predict_trace.length > 0;
-  const stateCols = simData.columns.filter(c => c.startsWith('state_'));
+  const mapping = res.state_columns && typeof res.state_columns === 'object'
+    ? res.state_columns
+    : {};
+  const stateNames = Array.isArray(res.state_names) && res.state_names.length
+    ? res.state_names
+    : Object.keys(mapping);
+  const colors = ['#0984e3', '#e17055', '#00b894', '#6c5ce7', '#d63031', '#fdcb6e'];
   const traces = [];
 
-  stateCols.forEach(col => {
+  stateNames.forEach((stateName, i) => {
+    const col = mapping[stateName];
+    if (!col) return;
     const byTime = {};
     series.forEach(r => {
       const v = r[col];
@@ -705,42 +1011,78 @@ function buildFitChart(res) {
       byTime[r.time] = byTime[r.time] || [];
       byTime[r.time].push(v);
     });
-    // 变量名不要用 t：它会遮蔽上面的 i18n 函数 t()，导致下面 t('fitting.data_suffix')
-    // 抛 "TypeError: t is not a function"（每次成功拟合都在绘图阶段中断）
+    // 变量名不要用 t：它会遮蔽上面的 i18n 函数 t()。
     const timeKeys = Object.keys(byTime).map(Number).sort((a, b) => a - b);
     if (!timeKeys.length) return;
     const vals = timeKeys.map(ti => byTime[ti].reduce((a, b) => a + b, 0) / byTime[ti].length);
-    traces.push({ x: timeKeys, y: vals, type: 'scatter', mode: 'markers',
-      name: col.replace('state_', '') + t('fitting.data_suffix'),
-      marker: { size: 4 }, opacity: 0.6 });
+    traces.push({
+      x: timeKeys, y: vals, type: 'scatter', mode: 'markers',
+      name: `${stateName}${t('fitting.data_suffix')}`,
+      marker: { size: 4, color: colors[i % colors.length] }, opacity: 0.6,
+    });
   });
 
-  if (predTraces) {
-    res.predict_trace.forEach(tr => {
-      traces.push({ x: tr.t, y: tr.y, type: 'scatter', mode: 'lines',
-        name: t('fitting.ode_fit'), line: { width: 2, dash: 'solid' } });
+  if (Array.isArray(res.predict_trace) && res.predict_trace.length > 0) {
+    res.predict_trace.forEach((tr, i) => {
+      const stateName = stateNames[i] || `state ${i + 1}`;
+      traces.push({
+        x: tr.t, y: tr.y, type: 'scatter', mode: 'lines',
+        name: `${stateName} ${t('fitting.ode_fit')}`,
+        line: { width: 2, dash: 'solid', color: colors[i % colors.length] },
+      });
     });
   }
 
   Plotly.newPlot('chartFit', traces, {
     ...CHART_THEME, title: t('chart.fit_title'),
-    xaxis: { title: t('chart.time') }, yaxis: { title: t('chart.value'), range: [0, 1] },
+    xaxis: { title: t('chart.time') }, yaxis: { title: t('chart.value') },
   }, { responsive: true });
 }
 
 // ── Network ────────────────────────────────────────────────────────────────
 async function buildNetwork() {
   const warn = document.getElementById('netWarning');
-  if (!simData) { warn.style.display = 'block'; return; }
+  if (!simData) {
+    warn.textContent = t('network.warn');
+    warn.style.display = 'block';
+    return;
+  }
+  warn.textContent = '';
   warn.style.display = 'none';
 
-  const res = await api('/api/network');
-  if (res.error || !res.networks) return;
+  const requestRunId = simRunId;
+  const res = await api(withRunId('/api/network', requestRunId));
+  if (requestRunId !== simRunId) return;
+  if (res.error || !res.networks) {
+    document.getElementById('networkCards').innerHTML = '';
+    warn.textContent = res.error || t('network.failed');
+    warn.style.display = 'block';
+    return;
+  }
 
   const container = document.getElementById('networkCards');
-  container.innerHTML = res.networks.map((net, i) =>
-    `<div class="card"><div class="card-header"><h2>${net.name}</h2></div><div class="chart-container" id="networkChart${i}"></div></div>`
-  ).join('');
+  container.innerHTML = '';
+  res.networks.forEach((net, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    const heading = document.createElement('h2');
+    heading.textContent = net.name;
+    header.appendChild(heading);
+    const chart = document.createElement('div');
+    chart.className = 'chart-container';
+    chart.id = `networkChart${i}`;
+    card.appendChild(header);
+    card.appendChild(chart);
+    container.appendChild(card);
+  });
+
+  if (!hasPlotly()) {
+    warn.textContent = t('charts.plotly_failed');
+    warn.style.display = 'block';
+    return;
+  }
 
   setTimeout(() => {
     res.networks.forEach((net, i) => {
@@ -781,13 +1123,40 @@ async function buildNetwork() {
 }
 
 // ── Utils ──────────────────────────────────────────────────────────────────
-function setStatus(state, msg) {
+function applyStatus(state, msg) {
   const dot = document.getElementById('statusDot');
   dot.className = 'dot' + (state === 'ok' ? ' ok' : '');
   document.getElementById('statusText').textContent = msg;
 }
 
+function setStatus(state, msg, meta = {}) {
+  statusInfo = {
+    state,
+    message: msg,
+    kind: meta.kind || null,
+    r2: meta.r2 ?? null,
+  };
+  applyStatus(state, msg);
+}
+
+function refreshStatusI18n() {
+  const info = statusInfo;
+  if (info.kind === 'simRunning' || info.kind === 'fitRunning') {
+    applyStatus(info.state, t(info.kind === 'simRunning' ? 'status.running' : 'status.fitting'));
+  } else if (info.kind === 'simDone') {
+    applyStatus(info.state, t('status.simDone'));
+  } else if (info.kind === 'fitDone') {
+    applyStatus(info.state, t('status.fitDone', info.r2 ?? '\u2014'));
+  } else if (info.state === 'ready') {
+    applyStatus('ready', t('status.ready'));
+  } else {
+    applyStatus(info.state, info.message);
+  }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
+const fitModelSelect = document.getElementById('fitModel');
+if (fitModelSelect) fitModelSelect.addEventListener('change', () => { fitModelTouched = true; });
 buildFamilyConfigs();
 loadParams();
 refreshI18n();

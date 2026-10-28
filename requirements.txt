@@ -21,3 +21,6 @@ ruff==0.17.0
 
 # ── 可选依赖 [viz]：pip install "family_abm[viz]" ──
 networkx>=2.6
+
+# ── 可选依赖 [e2e]：pip install "family_abm[e2e]" ──
+playwright>=1.40

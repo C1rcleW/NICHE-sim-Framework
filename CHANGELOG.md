@@ -6,6 +6,30 @@
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 `0.x` 阶段的次版本号可能包含不兼容改动。
 
+## [Unreleased]
+
+### 修正
+
+- **生境输出不再伪造坐标**：`/api/niche` 区分原始值、缺失维度和截断维度；
+  缺失的 `social_capital` 返回 `null`，不再经 NaN 钳位变成 1.0。
+- **参数与输入契约统一**：新增参数规格真源，服务端拒绝未知/越界参数、
+  未知成员字段和超量计算请求；前端不再静默把空值转换成 0。
+- **运行结果按 `run_id` 隔离**：每次运行发布不可变快照，查询和拟合固定读取同一运行；
+  `/api/run` 移出事件循环，旧运行请求返回结构化 404。
+- **拟合诊断增强**：新增每状态 R²/RMSE/样本数、scipy `Bounds` 与 `predict()`
+  防护；前端只绘制实际映射状态。
+- **Web 可复现性展示修复**：切换语言后家庭名、状态栏、拟合结果和网络图保持正确；
+  智能体名称改用文本渲染，Run/Fit 请求期间禁用按钮。
+- **ML 特征防泄漏**：目标列不再进入特征，自动特征避开目标行缺失的跨类型列；
+  新增可追溯监督表、时间截断网络特征和时间切分工具。
+- **CI 与文档收口**：新增显式 Node 前端 job、Playwright Chromium 冒烟测试、
+  PEP 440 发布版本门禁，以及当前版本的 Web 截图。
+
+### 测试
+
+- 非 packaging 测试 186 项；另有 1 项真实浏览器测试需
+  `RUN_BROWSER_TESTS=1`，以及 16 项 packaging 测试。
+
 ## [0.1.1]
 
 第二个公开发布。本版把 round-2 审查（5 条流水线、93 条发现）中已确认的问题修完，
@@ -137,7 +161,7 @@
   `test_features_nan.py`（缺失值不再填 0）、`test_experiments.py`
   （实验函数尊重 `--steps`）、`test_examples_smoke.py`（示例可跑）；
   `test_influence.py` / `test_simulation_and_fitting.py` 新增 9 项。
-  测试总数 108 → 141。
+  发布时非 packaging 测试 160 项，另有 16 项 packaging 测试。
 - `experiments/mechanism_validation.py` 与 `sensitivity_analysis.py` 的
   `e2`/`e3`/`e4` 及敏感性函数接受 `steps` 参数，可经 `--steps` 覆盖
   （含 `MIN_STEPS_FOR_STAGE_COVERAGE` 守卫），便于快速复算。
@@ -195,7 +219,8 @@
 **研究实验（`experiments/`）**
 
 - `mechanism_validation.py` 四项可证伪检验：E1 易感性阶段结构、E2 效力随阶段递减、E3 剂量-反应与适用边界、E4 成年后滞后效应
-- `sensitivity_analysis.py` 参数敏感性：五条结论在 25–75 个参数组合下全部成立
+- `sensitivity_analysis.py` 参数敏感性：报告五条结论各自的稳健组合数；
+  后续复核确认 P2/P3 并非在所有组合下成立
 - `life_stage_reducibility.py` 可约性实验（结果是否定的，见下）
 
 **文档与工程**

@@ -28,10 +28,11 @@ function check(condition, label, detail) {
   if (!condition) failures.push(label);
 }
 
-function makeElement(id) {
+function makeElement(id, tag = 'div') {
   const classes = new Set();
   const element = {
     id,
+    tagName: String(tag).toUpperCase(),
     _innerHTML: '',
     textContent: '',
     _value: '',
@@ -51,7 +52,10 @@ function makeElement(id) {
     click: () => {},
     querySelector: () => makeElement('nested'),
     querySelectorAll: () => [],
-    appendChild: () => {},
+    appendChild: (child) => {
+      element.children.push(child);
+      return child;
+    },
     remove: () => {},
   };
 
@@ -112,7 +116,7 @@ function makeDocument() {
     querySelector: () => makeElement('q'),
     querySelectorAll: () => [],
     addEventListener: () => {},
-    createElement: () => makeElement('created'),
+    createElement: (tag) => makeElement('created', tag),
     body: makeElement('body'),
     documentElement: { lang: 'en' },
     cookie: '',
@@ -126,6 +130,7 @@ function makeDocument() {
 function loadDashboard(apiResponses, options) {
   const { doc, get } = makeDocument();
   const requests = [];
+  const plots = [];
   const deferred = (options && options.deferred) || false;
 
   const fetchStub = async (url, opts) => {
@@ -159,7 +164,12 @@ function loadDashboard(apiResponses, options) {
     window: {},
     console: { log: () => {}, warn: () => {}, error: () => {} },
     fetch: fetchStub,
-    Plotly: { newPlot: () => {}, purge: () => {} },
+    Plotly: {
+      newPlot: (id, traces, layout, config) => {
+        plots.push({ id, traces, layout, config });
+      },
+      purge: () => {},
+    },
     localStorage: {
       _store: {},
       getItem(k) { return Object.prototype.hasOwnProperty.call(this._store, k) ? this._store[k] : null; },
@@ -185,7 +195,7 @@ function loadDashboard(apiResponses, options) {
 
   const context = vm.createContext(sandbox);
   vm.runInContext(source, context, { filename: DASHBOARD });
-  return { sandbox, get, requests, pendingResolvers };
+  return { sandbox, get, requests, pendingResolvers, plots, context };
 }
 
 const FIT_OK = {
@@ -322,9 +332,13 @@ async function scenarioRunSimulationStatus() {
     if (u.includes('/api/models')) return ALL_DISABLED;
     return {};
   });
+  // 真实页面带默认值；桩必须显式提供，才能验证“不再静默兜底”的输入契约。
+  get('simSteps').value = '20';
+  get('simSeed').value = '42';
   await sandbox.runSimulation();
 
   check(get('fitRunBtn').disabled === true, '全禁用时按钮被禁用');
+  check(get('runSimBtn').disabled === false, '运行结束后运行按钮恢复可用');
   check(
     String(get('statusText').textContent) === sandbox.t('fitting.none_available'),
     '状态栏说明"没有可拟合模型"（而不是被"仿真完成"覆盖）',
@@ -388,7 +402,7 @@ function verifyTemplateIds() {
   console.log('== 场景 0：模板关键 id 与桩一致 ==');
   const templatePath = path.join(__dirname, '..', 'family_abm', 'web', 'templates', 'index.html');
   const html = fs.readFileSync(templatePath, 'utf8');
-  const required = ['fitModel', 'fitAgent', 'fitRunBtn', 'fitKPIs', 'fitParams', 'statusText', 'statusDot', 'simSteps', 'familyConfigs', 'paramGroups'];
+  const required = ['fitModel', 'fitAgent', 'fitRunBtn', 'fitKPIs', 'fitParams', 'statusText', 'statusDot', 'simSteps', 'simSeed', 'runSimBtn', 'familyConfigs', 'paramGroups'];
   const missingIds = required.filter((id) => !html.includes(`id="${id}"`));
   check(missingIds.length === 0, '模板包含 harness 依赖的全部 id', missingIds.length ? `缺少 ${JSON.stringify(missingIds)}` : 'ok');
 }
@@ -484,6 +498,10 @@ async function scenarioAutoMappingIsVisible() {
     '发出的 /api/fit 请求确实携带该映射',
     fitBody ? String(fitBody.body) : 'no fit request',
   );
+  check(
+    get('fitRunBtn').disabled === false,
+    '拟合结束后拟合按钮恢复可用',
+  );
 }
 
 async function scenarioNonPositiveR2DoesNotLookLikePass() {
@@ -530,6 +548,71 @@ async function scenarioNonPositiveR2DoesNotLookLikePass() {
   check(!goodKpis.includes('result-kpi muted'), 'R² 为正时不出现降级样式');
 }
 
+async function scenarioAgentNamesAreRenderedAsText() {
+  console.log('\n== 场景 S5：智能体名称不得被当作 HTML ==');
+  const { sandbox, context, get } = loadDashboard(() => ({}));
+  const payload = {
+    agents: [{ id: 'a1', name: '<img src=x onerror=alert(1)>', role: 'child' }],
+    columns: [],
+    data: [],
+    steps: 0,
+  };
+  vm.runInContext(`simData = ${JSON.stringify(payload)};`, context);
+  sandbox.buildAgentList();
+  const chip = get('agentsList').children[0];
+  check(!!chip && chip.tagName === 'SPAN', '成员标签已通过 DOM 创建');
+  check(
+    !!chip && chip.textContent === '<img src=x onerror=alert(1)> (child)',
+    '名称保留为纯文本',
+    chip ? String(chip.textContent) : 'missing',
+  );
+  check(
+    !!chip && !String(chip.innerHTML).includes('<img'),
+    '名称未进入 innerHTML',
+    chip ? String(chip.innerHTML) : 'missing',
+  );
+}
+
+async function scenarioFitChartUsesOnlyMappedStates() {
+  console.log('\n== 场景 C2：拟合图只画实际映射状态 ==');
+  const { sandbox, context, plots } = loadDashboard(() => ({}));
+  const data = {
+    agents: [{ id: 'm1', name: 'M1', role: 'parent', age: 40 }],
+    columns: ['agent_id', 'time', 'state_a', 'state_b', 'state_other'],
+    data: [
+      { agent_id: 'm1', time: 0, state_a: 0.1, state_b: 0.2, state_other: 0.9 },
+      { agent_id: 'm1', time: 1, state_a: 0.3, state_b: 0.4, state_other: 0.9 },
+    ],
+    steps: 1,
+  };
+  vm.runInContext(`simData = ${JSON.stringify(data)};`, context);
+  const fit = {
+    state_columns: { R1: 'state_a', R2: 'state_b' },
+    state_names: ['R1', 'R2'],
+    predict_trace: [
+      { t: [0, 1], y: [0.11, 0.31] },
+      { t: [0, 1], y: [0.21, 0.41] },
+    ],
+  };
+  sandbox.buildFitChart(fit);
+  const plot = plots.filter((p) => p.id === 'chartFit').pop();
+  check(!!plot, '拟合图已绘制');
+  if (!plot) return;
+  check(plot.traces.length === 4, '只绘制 2 个映射状态的观测与预测', `实际 ${plot.traces.length} 条`);
+  const names = plot.traces.map((tr) => tr.name);
+  check(
+    names.includes('R1 data') && names.includes('R2 data')
+      && names.includes('R1 ODE fit') && names.includes('R2 ODE fit'),
+    '观测与预测按状态一一命名',
+    JSON.stringify(names),
+  );
+  check(
+    !plot.traces.some((tr) => JSON.stringify(tr.y).includes('0.9')),
+    '未映射的 state_other 不进入拟合图',
+  );
+  check(!(plot.layout.yaxis && plot.layout.yaxis.range), 'Y 轴不再固定为 [0,1]');
+}
+
 (async () => {
   verifyTemplateIds();
   await scenarioAllDisabled();
@@ -540,6 +623,8 @@ async function scenarioNonPositiveR2DoesNotLookLikePass() {
   await scenarioRunSimulationStatus();
   await scenarioAutoMappingIsVisible();
   await scenarioNonPositiveR2DoesNotLookLikePass();
+  await scenarioAgentNamesAreRenderedAsText();
+  await scenarioFitChartUsesOnlyMappedStates();
   console.log('');
   if (failures.length) {
     console.log(`结果：失败 ${failures.length} 项 -> ${JSON.stringify(failures)}`);

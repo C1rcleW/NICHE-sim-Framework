@@ -17,9 +17,105 @@ class FeatureExtractor:
 
     def build_agent_trajectories(self, agent_id: str | None = None) -> pd.DataFrame:
         df = self.build_agent_panel()
+        if df.empty:
+            return df
+        if "agent_id" not in df.columns:
+            raise ValueError("状态面板缺少 agent_id 列")
         if agent_id is not None:
             df = df[df["agent_id"] == agent_id]
         return df.sort_values(["agent_id", "time"])
+
+    @staticmethod
+    def _validate_lag(lag_steps: int) -> int:
+        if isinstance(lag_steps, bool) or not isinstance(lag_steps, (int, np.integer)):
+            raise ValueError(f"lag_steps 必须是整数，收到 {lag_steps!r}")
+        lag = int(lag_steps)
+        if lag < 1:
+            raise ValueError(f"lag_steps 必须大于 0，收到 {lag}")
+        return lag
+
+    def _resolve_feature_columns(
+        self,
+        df: pd.DataFrame,
+        feature_columns: list[str] | None,
+        target_column: str | None,
+    ) -> list[str]:
+        numeric_cols = [
+            c for c in df.select_dtypes(include=[np.number]).columns
+            if c not in {"time", "alive"}
+        ]
+        if feature_columns is None:
+            # A supervision target must never be part of its own feature vector.
+            candidates = [c for c in numeric_cols if c != target_column]
+            if target_column is not None:
+                target_rows = df[target_column].notna()
+                # A target owned by one agent type should not pull in columns that
+                # only another agent type has; those would make every row incomplete.
+                candidates = [
+                    c for c in candidates
+                    if target_rows.any() and df.loc[target_rows, c].notna().any()
+                ]
+            feature_cols = candidates
+        else:
+            feature_cols = list(feature_columns)
+            if not feature_cols:
+                raise ValueError("feature_columns 不能为空；传 None 才表示自动选择")
+            duplicates = sorted({c for c in feature_cols if feature_cols.count(c) > 1})
+            if duplicates:
+                raise ValueError(f"feature_columns 含重复列：{duplicates}")
+            missing = [c for c in feature_cols if c not in df.columns]
+            if missing:
+                raise ValueError(f"feature_columns 含不存在的列：{missing}")
+            if target_column is not None and target_column in feature_cols:
+                raise ValueError(f"目标列 {target_column!r} 不能同时作为特征列")
+            non_numeric = [
+                c for c in feature_cols
+                if not pd.api.types.is_numeric_dtype(df[c])
+            ]
+            if non_numeric:
+                raise ValueError(f"feature_columns 必须都是数值列，非数值列：{non_numeric}")
+
+        if not feature_cols:
+            raise ValueError("没有可用的数值特征列")
+        return feature_cols
+
+    def _prepare_supervised(
+        self,
+        feature_columns: list[str] | None,
+        target_column: str | None,
+        lag_steps: int,
+    ) -> tuple[pd.DataFrame, list[str], pd.Series, pd.Series | None]:
+        df = self.build_agent_panel()
+        lag = self._validate_lag(lag_steps)
+        if df.empty:
+            return df, [], pd.Series(dtype=bool), None
+
+        required = {"agent_id", "time"}
+        missing_columns = sorted(required - set(df.columns))
+        if missing_columns:
+            raise ValueError(f"状态面板缺少必需列：{missing_columns}")
+
+        if target_column is not None:
+            if target_column in required:
+                raise ValueError(f"目标列不能是 {target_column!r}")
+            if target_column not in df.columns:
+                state_columns = sorted(c for c in df.columns if str(c).startswith("state_"))
+                raise ValueError(
+                    f"目标列 {target_column!r} 不存在。可用状态列：{state_columns}"
+                )
+            if not pd.api.types.is_numeric_dtype(df[target_column]):
+                raise ValueError(f"目标列 {target_column!r} 必须是数值列")
+
+        feature_cols = self._resolve_feature_columns(df, feature_columns, target_column)
+        df = df.sort_values(["agent_id", "time"])
+        frame = df.loc[:, feature_cols]
+        valid = frame.notna().all(axis=1)
+
+        y = None
+        if target_column is not None:
+            y = df.groupby("agent_id", sort=False)[target_column].shift(-lag)
+            valid = valid & y.notna()
+        return df, feature_cols, valid, y
 
     def extract_features(
         self,
@@ -27,47 +123,41 @@ class FeatureExtractor:
         target_column: str | None = None,
         lag_steps: int = 1,
     ) -> tuple[np.ndarray, np.ndarray | None]:
-        """构造监督学习用的 (X, y)。
+        """Return aligned X/y arrays; use extract_supervised_frame for traceability.
 
-        **缺失值契约**：不填 0。宽表里的 ``NaN`` 表达"该 agent 类型没有这个状态"
-        （Household 没有 ``state_happiness``，FamilyMember 没有 ``state_total_income``），
-        填 0 会把"不存在"伪造成真实观测值——这正是 recorder 在 ``to_dataframe``
-        中刻意保留 NaN、fitter 依赖 ``groupby.mean()`` 跳过 NaN 的原因。
-
-        因此这里按 **完整案例** 过滤：任一特征列或目标列为 ``NaN`` 的行被丢弃，
-        X 与 y 用同一掩码对齐。附带效果：
-
-        - 选择成员状态列时，Household 行自然被排除（它本就没有这些状态）；
-        - 滞后目标（``shift(-lag_steps)``）使每个 agent 轨迹尾部 ``lag_steps`` 行
-          的未来值为 ``NaN``，这些行同样被丢弃，而不是伪造成目标 0。
-
-        行序按 ``(agent_id, time)`` 排序，保证 ``groupby('agent_id').shift`` 的
-        组内顺序即时间顺序。全部被过滤时返回形状 ``(0, n_features)`` 的空数组。
+        Missing values remain missing and are dropped by complete-case filtering.
+        When feature_columns is omitted, the target and columns unavailable on
+        target-bearing rows are excluded automatically.
         """
-        df = self.build_agent_panel()
+        df, feature_cols, valid, y = self._prepare_supervised(
+            feature_columns, target_column, lag_steps,
+        )
         if df.empty:
             return np.array([]), None
 
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        if "time" in numeric_cols:
-            numeric_cols.remove("time")
-        feature_cols = feature_columns or numeric_cols
-
-        df = df.sort_values(["agent_id", "time"])
-        frame = df.loc[:, feature_cols]
-        valid = frame.notna().all(axis=1)
-        y = None
-        if target_column and target_column in df.columns:
-            y = df.groupby("agent_id", sort=False)[target_column].shift(-lag_steps)
-            valid = valid & y.notna()
-            y_array = y[valid].to_numpy()
-        else:
-            y_array = None
-
-        X = frame[valid].to_numpy()
-        if y_array is None:
+        X = df.loc[valid, feature_cols].to_numpy()
+        if y is None:
             return X, None
-        return X, y_array
+        return X, y.loc[valid].to_numpy()
+
+    def extract_supervised_frame(
+        self,
+        feature_columns: list[str] | None = None,
+        target_column: str | None = None,
+        lag_steps: int = 1,
+    ) -> pd.DataFrame:
+        """Supervised dataset with agent_id/time retained for auditable splits."""
+        if target_column is None:
+            raise ValueError("extract_supervised_frame 需要 target_column")
+        df, feature_cols, valid, y = self._prepare_supervised(
+            feature_columns, target_column, lag_steps,
+        )
+        if df.empty:
+            return pd.DataFrame(columns=["agent_id", "time", *feature_cols, target_column])
+        assert y is not None
+        result = df.loc[valid, ["agent_id", "time", *feature_cols]].copy()
+        result[target_column] = y.loc[valid].to_numpy()
+        return result.reset_index(drop=True)
 
     def build_transition_dataset(
         self,
@@ -75,10 +165,33 @@ class FeatureExtractor:
         lag: int = 1,
     ) -> pd.DataFrame:
         df = self.build_agent_panel()
+        lag = self._validate_lag(lag)
         if df.empty:
             return pd.DataFrame()
+        missing_required = sorted({"agent_id", "time"} - set(df.columns))
+        if missing_required:
+            raise ValueError(f"状态面板缺少必需列：{missing_required}")
 
-        state_cols = state_columns or [c for c in df.columns if c.startswith("state_")]
+        state_cols = (
+            [c for c in df.columns if c.startswith("state_")]
+            if state_columns is None
+            else list(state_columns)
+        )
+        if not state_cols:
+            raise ValueError("没有可用的状态列")
+        duplicates = sorted({c for c in state_cols if state_cols.count(c) > 1})
+        if duplicates:
+            raise ValueError(f"state_columns 含重复列：{duplicates}")
+        missing = [c for c in state_cols if c not in df.columns]
+        if missing:
+            raise ValueError(f"state_columns 含不存在的列：{missing}")
+        non_numeric = [
+            c for c in state_cols
+            if not pd.api.types.is_numeric_dtype(df[c])
+        ]
+        if non_numeric:
+            raise ValueError(f"state_columns 必须都是数值列，非数值列：{non_numeric}")
+
         records = []
         for agent_id, group in df.groupby("agent_id"):
             group = group.sort_values("time")
@@ -91,16 +204,48 @@ class FeatureExtractor:
                     row[f"{col}_t+{lag}"] = target[col]
                 row["agent_id"] = agent_id
                 row["time"] = source["time"]
+                row["target_time"] = target["time"]
                 records.append(row)
         return pd.DataFrame(records)
 
-    def build_network_features(self, agent_id: str | None = None) -> pd.DataFrame:
+    def build_network_features(
+        self,
+        agent_id: str | None = None,
+        up_to_time: float | None = None,
+    ) -> pd.DataFrame:
+        """Descriptive per-agent aggregates; pass up_to_time for predictive use."""
         df = self.build_agent_panel()
         if df.empty:
             return pd.DataFrame()
+        if "agent_id" not in df.columns:
+            raise ValueError("状态面板缺少 agent_id 列")
+        if agent_id is not None:
+            df = df[df["agent_id"] == agent_id]
+            if df.empty:
+                raise ValueError(f"没有 agent_id={agent_id!r} 的记录")
+        if up_to_time is not None:
+            if "time" not in df.columns:
+                raise ValueError("按时间截断需要 time 列")
+            df = df[df["time"] <= up_to_time]
+        if df.empty:
+            return pd.DataFrame()
+
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         if "time" in numeric_cols:
             numeric_cols.remove("time")
         grouped = df.groupby("agent_id")[numeric_cols].agg(["mean", "std", "min", "max"])
         grouped.columns = ["_".join(col).strip() for col in grouped.columns.values]
         return grouped.reset_index()
+
+    @staticmethod
+    def split_by_time(
+        frame: pd.DataFrame,
+        test_start_time: float,
+        time_column: str = "time",
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Deterministic temporal split: < cutoff is train, >= cutoff is test."""
+        if time_column not in frame.columns:
+            raise ValueError(f"数据缺少时间列 {time_column!r}")
+        train = frame[frame[time_column] < test_start_time].copy()
+        test = frame[frame[time_column] >= test_start_time].copy()
+        return train, test
