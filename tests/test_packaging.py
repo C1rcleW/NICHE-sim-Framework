@@ -60,7 +60,16 @@ def _run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProces
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env.setdefault("PYTHONUTF8", "1")
-    return subprocess.run(args, cwd=str(cwd) if cwd else None, capture_output=True, text=True, env=env, timeout=600)
+    return subprocess.run(
+        args,
+        cwd=str(cwd) if cwd else None,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
+        timeout=600,
+    )
 
 
 def _stage_sources(destination: Path) -> Path:
@@ -326,6 +335,8 @@ def test_verify_install_fails_when_http_dependency_missing(built_dist: dict) -> 
         cwd=str(built_dist["target"]),
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         env=env,
         timeout=300,
     )

@@ -49,6 +49,7 @@ def test_action_controls_reject_unknown_and_out_of_range_params() -> None:
 
 def test_action_controls_enforce_step_and_population_limits() -> None:
     cases = [
+        {"steps": 0},
         {"steps": 5001},
         {"steps": "5"},
         {"steps": True},

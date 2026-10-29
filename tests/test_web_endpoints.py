@@ -307,7 +307,10 @@ def test_api_fit_timeout_returns_structured_504(client, monkeypatch):
 
 @pytest.mark.parametrize(
     ("raw", "expected"),
-    [("5", 5.0), ("2.5", 2.5), ("abc", None), ("-1", None), ("0", None), ("", None)],
+    [
+        ("5", 5.0), ("2.5", 2.5), ("abc", None), ("-1", None), ("0", None),
+        ("nan", None), ("inf", None), ("", None),
+    ],
 )
 def test_fit_timeout_env_override(monkeypatch, raw, expected):
     monkeypatch.setenv("FAMILY_ABM_FIT_TIMEOUT_SECONDS", raw)

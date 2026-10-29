@@ -10,13 +10,17 @@
 **研究问题**：家庭内部的代际影响强度随子代发展阶段系统性下降。这种变化如何影响子代的长期结果？含有时变影响系数的家庭动力学，能否被低维方程刻画？
 
 > 完整的研究设计（理论框架、四项可证伪检验、敏感性分析、政策意涵）见
-> [`docs/研究设计文档.docx`](docs/)。README 讲**怎么用**，设计文档讲**研究什么**。
+> [`docs/研究设计文档.docx`](docs/研究设计文档.docx) 与
+> [`docs/研究设计.md`](docs/研究设计.md)。README 讲**怎么用**，设计文档讲**研究什么**。
+>
+> **R0 研究决策记录**：[`docs/R0-研究决策记录.md`](docs/R0-研究决策记录.md)。
+> 影响公式、经济压力时点、收入归一化等待决项在 0.1.2 中**未改变默认行为**。
 
 ---
 
 ## 核心功能
 
-- **代际影响机制** — 影响量 = 影响强度 × 易感性(年龄) × Σ(关系权重 × 来源养育能力 × 来源健康) × 状态差距；易感性随埃里克森阶段阶梯下降，子代成年后转为施加影响一方
+- **代际影响机制** — 影响量 = 影响强度 × 易感性(年龄) × (1/未成年成员数) × (加权平均来源幸福 − 自身幸福)；易感性随埃里克森阶段阶梯下降，子代成年后转为施加影响一方（公式口径见 R0 记录）
 - **多层次仿真** — 家庭包含多个成员智能体，每人拥有独立的人格、年龄轨迹、教育、收入、健康、情绪状态
 - **交互式仪表板** — FastAPI + Plotly.js，内置中英文双语，在浏览器中完成仿真配置、运行、拟合、可视化全流程
 - **ODE 拟合** — 7 种内置兰彻斯特型社会动力学模型（竞争、影响、幸福-压力平衡等），支持多起点鲁棒优化和差分进化全局搜索
@@ -55,6 +59,20 @@ python examples/fitting_viz_demo.py     # 拟合 + 可视化
 > 结果基线：机制验证与敏感性分析均为 **6 个种子**（1000–1005）、300 步。
 > 种子数是结论的一部分——`paired_noise` 用系综内标准差估计，小 n 会低估噪声、
 > 放大信噪比。**换用不同种子数时结论会变**，详见 `docs/experiments.md`。
+
+复现结果文件：
+
+```bash
+python experiments/mechanism_validation.py --seeds 6 --steps 300 \
+  --json experiments/results/mechanism_validation.json \
+  --plot experiments/results/mechanism_validation.png
+python experiments/sensitivity_analysis.py --seeds 6 --steps 300 \
+  --json experiments/results/sensitivity_analysis.json \
+  --plot experiments/results/sensitivity_analysis.png
+python experiments/life_stage_reducibility.py --steps 240 \
+  --json experiments/results/life_stage_reducibility.json \
+  --plot experiments/results/life_stage_reducibility.png
+```
 
 **机制验证**（`experiments/mechanism_validation.py`）
 
@@ -167,16 +185,16 @@ from family_abm import (
     plot_timeseries, plot_fit_diagnostics,
 )
 
-# 构建仿真
+# 构建仿真（先注入 RNG，再构造智能体）
 env = Environment()
-hh = Household(name="张")
+sim = Simulation(env, scheduler=Scheduler("sequential"), seed=42)
+hh = Household(name="张", environment=env)
 env.add_agent(hh)
-hh.add_member(FamilyMember(name="父亲", age=35, role_name="parent"))
-hh.add_member(FamilyMember(name="儿子", age=8, role_name="child"))
+hh.add_member(FamilyMember(name="父亲", age=35, role_name="parent", environment=env))
+hh.add_member(FamilyMember(name="儿子", age=8, role_name="child", environment=env))
 
 # 运行
 recorder = StateRecorder(record_agents=True)
-sim = Simulation(env, scheduler=Scheduler("sequential"))
 sim.add_recorder(recorder)
 sim.run(120)
 
@@ -248,13 +266,19 @@ Happiness 6 ／ Noise 1 ／ Influence 6（含两个政策杠杆与两个形状�
 家庭成员之间存在影响传导：年长成员把年幼成员拉向自己的状态，
 
 ```
-影响量 = 影响强度 × 易感性(年龄) × Σ(关系权重 × 来源养育能力 × 来源健康)
+影响量 = 影响强度 × 易感性(年龄) × (1 / 未成年成员数)
          × (加权平均来源幸福感 − 自己幸福感)
+
+加权平均来源幸福感 =
+    Σ(关系权重 × 来源养育能力 × 来源健康 × 来源幸福感)
+    / Σ(关系权重 × 来源养育能力 × 来源健康)
 ```
 
 - **关系权重**取自 `Relationship.influence_weight()`（信任、权力、情感）并扣除冲突
 - **来源养育能力**是成年成员的 `influence` 存量，随持续投入缓慢衰减
-- **来源健康**作为能量约束：身体越差，施加影响的能力越弱
+- **来源健康**参与来源间的相对加权；在单来源或同质来源时，其绝对大小不改变影响量
+- 该归一化口径与早期文档的乘积式不同，是否作为最终研究定义见
+  [`docs/R0-研究决策记录.md`](docs/R0-研究决策记录.md)
 
 **易感性借用埃里克森心理社会发展阶段**，随年龄阶梯下降，阶段边界处线性过渡
 （避免人为的动力学间断）：
@@ -392,7 +416,15 @@ sim = Simulation(env, scheduler=Scheduler("random_activation"))
 - **易感性与影响强度未经实证标定**：阶段取值取自埃里克森阶段理论的含义而非测量数据，
   影响强度属模型参数。结论必须配合敏感性分析说明稳健范围。
 - **小生境空间维度不完整**：`social` 维度依赖 `social_capital`，目前只有 `Household` 拥有该状态；
-  `economic` 直接取收入值，未做归一化。
+  `economic` 直接取收入值并截断到 `[0,1]`，未做归一化；Web 输出同时提供原始值与截断标记。
+- **影响公式口径待决**：当前实现按未成年成员数分摊，并对来源权重/养育能力/健康做归一化；
+  这与早期文档的乘积式不同。是否作为最终研究定义见 R0 记录，本版本不擅自改模型。
+- **经济压力存在步内时序**：Household 在成员收入更新后/前的关系取决于注册顺序；
+  首步压力可能尚未与收入同步。基准、是否步前预计算、收入支持作用点均列入 R0。
+- **易感性记录与 E2 成年期解释待复核**：成年成员不再接收影响，记录中的
+  `susceptibility` 可能停在阈值前值；E2 成年早期结果需区分边界帧与设计性零效应。
+- **`resource_competition` 的默认边界可能病态**：部分数据上会返回
+  `model_not_applicable`，不能把该状态视为成功拟合。
 - **`FeatureExtractor` 的缺失值处理**：`extract_features` 不填 0，按完整案例丢弃
   特征列或目标含 `NaN` 的行（X/y 同一掩码对齐）。宽表里的 `NaN` 表示"该 agent
   类型没有这个状态"，填 0 会伪造观测与监督信号；如需保留全部行请自行插补。
@@ -448,7 +480,7 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
   author = {C1rcleW},
   year   = {2026},
   url    = {https://github.com/C1rcleW/NICHE-sim-Framework},
-  note   = {Version 0.1.1}
+  note   = {Version 0.1.2}
 }
 ```
 
@@ -462,9 +494,9 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
 
 ## 版本
 
-当前版本 **0.1.1**。变更历史见 [CHANGELOG.md](CHANGELOG.md)，
+当前版本 **0.1.2**。变更历史见 [CHANGELOG.md](CHANGELOG.md)，
 发布产物见 [Releases](https://github.com/C1rcleW/NICHE-sim-Framework/releases)，
-本次发布说明见 [docs/release-notes-0.1.1.md](docs/release-notes-0.1.1.md)。
+本次发布说明见 [docs/release-notes-0.1.2.md](docs/release-notes-0.1.2.md)。
 
 引用本项目的规范格式见 [CITATION.cff](CITATION.cff)。
 
@@ -472,15 +504,16 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
 
 ### 发布流程
 
-1. 更新 `pyproject.toml` 与 `family_abm/__init__.py` 的版本号，并在 `CHANGELOG.md` 记录变更
-   （两者一致性由 `tests/test_packaging.py` 强制）
-2. 打 tag 并推送：`git tag -a v0.1.1 -m "..." && git push origin v0.1.1`
+1. 同步更新 `pyproject.toml`、`family_abm/__init__.py`、`CITATION.cff`、
+   `README.md`、研究设计生成器与产物，并在 `CHANGELOG.md` 记录变更
+   （版本一致性由 `tests/test_release_consistency.py` 强制）
+2. 打 tag 并推送：`git tag -a v0.1.2 -m "..." && git push origin v0.1.2`
 3. CI 的 `release` job 自动构建 wheel 与 sdist、创建 Release 并附加产物
    （Release 不存在时自动创建；带 `-rc.1` 这类后缀的 tag 自动标记为 pre-release）
 4. 用工具生成结构化发布说明，粘贴到 Release 覆盖自动生成的正文：
 
    ```bash
-   python tools/extract_release_notes.py 0.1.1 docs/release-notes-0.1.1.md
+   python tools/extract_release_notes.py 0.1.2 docs/release-notes-0.1.2.md
    ```
 
 产物版本号与 tag 的一致性由 CI 强制校验，不一致会直接失败。

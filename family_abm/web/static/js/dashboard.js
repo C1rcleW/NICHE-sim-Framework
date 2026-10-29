@@ -51,6 +51,7 @@ const I18N = {
     'charts.niche_clipped_dims': '以下原始值被截断到 [0,1]：{0}；原始值见 /api/niche。',
     'charts.plotly_failed': 'Plotly 未能加载，图表不可用；请检查网络或改用离线版资源。',
     'network.failed': '家庭关系网络加载失败。',
+    'fitting.run_in_progress': '仿真仍在运行，请完成后再拟合。',
     'fitting.warn': '请先运行仿真，然后选择模型进行拟合。',
     'fitting.title': 'ODE模型拟合（兰彻斯特型）',
     'fitting.model': '模型',
@@ -147,6 +148,7 @@ const I18N = {
     'charts.niche_clipped_dims': 'Raw values clipped to [0,1]: {0}; see /api/niche for raw values.',
     'charts.plotly_failed': 'Plotly failed to load; charts are unavailable. Check the network or use local assets.',
     'network.failed': 'Could not load family networks.',
+    'fitting.run_in_progress': 'The simulation is still running; wait before fitting.',
     'fitting.warn': 'Run a simulation first, then select a model to fit.',
     'fitting.title': 'ODE Model Fitting (Lanchester-type)',
     'fitting.model': 'Model',
@@ -247,8 +249,15 @@ function setLang(lang) {
   const activeTab = document.querySelector('.tab-content.active');
   if (activeTab && activeTab.id === 'tab-fitting') {
     buildFittingView();
-    loadModelInfo();
-    if (lastFitResult) renderFitResult(lastFitResult, lastFitModel);
+    loadModelInfo().then(() => {
+      if (lastFitResult && fitContextMatches()) {
+        document.getElementById('fitResultCard').style.display = 'block';
+        document.getElementById('fitChartCard').style.display = 'block';
+        renderFitResult(lastFitResult, lastFitModel, lastFitContext);
+      } else {
+        hideFitResult();
+      }
+    });
   } else if (activeTab && activeTab.id === 'tab-network') {
     buildNetwork();
   }
@@ -260,6 +269,8 @@ let simRunId = null;
 let _runSeq = 0;
 let lastFitResult = null;
 let lastFitModel = null;
+let lastFitContext = null;
+let runInFlight = false;
 let statusInfo = { state: 'ready', message: null, kind: null, r2: null };
 const CHART_THEME = {
   paper_bgcolor: '#fff', plot_bgcolor: '#f8fafc',
@@ -283,10 +294,12 @@ function onTabSwitch(tab) {
   if (tab === 'charts' && simData) buildCharts();
   if (tab === 'fitting' && simData) {
     buildFittingView();
-    if (lastFitResult) {
+    if (lastFitResult && fitContextMatches()) {
       document.getElementById('fitResultCard').style.display = 'block';
       document.getElementById('fitChartCard').style.display = 'block';
-      renderFitResult(lastFitResult, lastFitModel);
+      renderFitResult(lastFitResult, lastFitModel, lastFitContext);
+    } else {
+      hideFitResult();
     }
   }
   if (tab === 'network' && simData) buildNetwork();
@@ -344,6 +357,44 @@ function withRunId(url, runId = simRunId) {
   return `${url}${sep}run_id=${encodeURIComponent(runId)}`;
 }
 
+function hideFitResult() {
+  ['fitResultCard', 'fitChartCard'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function invalidateFitResult() {
+  lastFitResult = null;
+  lastFitModel = null;
+  lastFitContext = null;
+  _fitSeq += 1;
+  hideFitResult();
+}
+
+function fitContextMatches() {
+  if (!lastFitContext || !simRunId) return false;
+  const agentSel = document.getElementById('fitAgent');
+  const modelSel = document.getElementById('fitModel');
+  const agentId = agentSel ? (agentSel.value || null) : null;
+  const model = modelSel ? modelSel.value : null;
+  return lastFitContext.run_id === simRunId
+    && lastFitContext.agent_id === agentId
+    && lastFitContext.model === model;
+}
+
+function restoreStableViewStatus() {
+  if (lastFitResult && fitContextMatches()) {
+    const r2 = lastFitResult.summary?.r_squared;
+    const r2val = r2 !== null && r2 !== undefined ? Number(r2).toFixed(4) : '\u2014';
+    setStatus('ok', t('status.fitDone', r2val), { kind: 'fitDone', r2: r2val });
+  } else if (simData) {
+    setStatus('ok', t('status.simDone'), { kind: 'simDone' });
+  } else {
+    setStatus('ready', t('status.ready'));
+  }
+}
+
 function clearRunView() {
   simData = null;
   simRunId = null;
@@ -353,9 +404,12 @@ function clearRunView() {
   modelInfoRunId = null;
   lastFitResult = null;
   lastFitModel = null;
+  lastFitContext = null;
   fitModelTouched = false;
   _modelInfoSeq += 1;
   _fitSeq += 1;
+  const fitBtn = document.getElementById('fitRunBtn');
+  if (fitBtn) fitBtn.disabled = true;
   ['resultCard', 'agentSelectCard', 'timeseriesCard', 'nicheCard', 'fitResultCard', 'fitChartCard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -509,11 +563,12 @@ function getFamilyConfigs() {
 async function runSimulation() {
   const runBtn = document.getElementById('runSimBtn');
   if (runBtn) runBtn.disabled = true;
+  runInFlight = true;
   setStatus('running', t('status.running'), { kind: 'simRunning' });
   try {
     let cfg;
     try {
-      const stepLimit = simLimits.steps || { min: 0, max: 5000 };
+      const stepLimit = simLimits.steps || { min: 1, max: 5000 };
       cfg = {
         steps: readNumberInput(
           document.getElementById('simSteps'), t('setup.steps'),
@@ -558,14 +613,15 @@ async function runSimulation() {
     // 不能被下面那句"仿真完成"覆盖（复核指出这正是原因说明不可见的原因）。
     const infoState = await loadModelInfo();
     if (seq !== _runSeq) return;
-    if (infoState === 'ready') {
+    if (infoState === 'ready' || infoState === 'stale') {
+      // 运行本身已经成功；模型可拟合性只影响拟合页，不应把状态栏卡在 Running。
       setStatus('ok', t('status.simDone'), { kind: 'simDone' });
     } else if (infoState === 'none') {
       setStatus('error', t('fitting.none_available'));
     }
-    // 'error' 分支已由 loadModelInfo 写过状态；'stale' 说明有更新的加载在进行，交给它收尾
     document.querySelector('#tabNav button[data-tab="charts"]').click();
   } finally {
+    runInFlight = false;
     if (runBtn) runBtn.disabled = false;
   }
 }
@@ -709,7 +765,11 @@ function buildAgentList() {
     sel.value = previousAgent;
   }
   // 拟合对象变化会改变"哪些状态列有变化"，需要重新评估模型可拟合性
-  sel.onchange = () => { scheduleLoadModelInfo(); };
+  sel.onchange = () => {
+    invalidateFitResult();
+    restoreStableViewStatus();
+    scheduleLoadModelInfo();
+  };
 }
 
 let selAgentId = null;
@@ -858,11 +918,21 @@ async function runFitting() {
   try {
     await _runFittingImpl();
   } finally {
-    if (fitBtn) fitBtn.disabled = fitSelectionBlocked();
+    if (fitBtn) {
+      fitBtn.disabled = runInFlight || !simRunId || fitSelectionBlocked();
+    }
   }
 }
 
 async function _runFittingImpl() {
+  if (runInFlight) {
+    setStatus('error', t('fitting.run_in_progress'));
+    return;
+  }
+  if (!simRunId) {
+    setStatus('error', t('fitting.warn'));
+    return;
+  }
   setStatus('running', t('status.fitting'), { kind: 'fitRunning' });
   const fitSeq = ++_fitSeq;
   const requestRunId = simRunId;
@@ -874,7 +944,10 @@ async function _runFittingImpl() {
   if (modelInfoAgentId !== selectedAgent || modelInfoRunId !== requestRunId) {
     const state = await loadModelInfo();
     if (fitSeq !== _fitSeq || requestRunId !== simRunId) return;
-    if (state === 'stale') return;
+    if (state === 'stale') {
+      restoreStableViewStatus();
+      return;
+    }
     if (modelInfoAgentId !== selectedAgent || modelInfoRunId !== requestRunId) {
       if (state === 'none') setStatus('error', t('fitting.none_available'));
       return;
@@ -896,8 +969,8 @@ async function _runFittingImpl() {
 
   lastFitResult = null;
   lastFitModel = null;
-  document.getElementById('fitResultCard').style.display = 'none';
-  document.getElementById('fitChartCard').style.display = 'none';
+  lastFitContext = null;
+  hideFitResult();
 
   const res = await api('/api/fit', {
     method: 'POST',
@@ -916,13 +989,14 @@ async function _runFittingImpl() {
   document.getElementById('fitChartCard').style.display = 'block';
   lastFitResult = res;
   lastFitModel = model;
-  renderFitResult(res, model);
+  lastFitContext = { run_id: requestRunId, agent_id: agent, model };
+  renderFitResult(res, model, lastFitContext);
 
   const r2val = res.summary.r_squared !== null ? res.summary.r_squared.toFixed(4) : '\u2014';
   setStatus('ok', t('status.fitDone', r2val), { kind: 'fitDone', r2: r2val });
 }
 
-function renderFitResult(res, model) {
+function renderFitResult(res, model, context = null) {
   if (!res || !res.summary) return;
   const s = res.summary;
   // 告警必须可见：贴边参数表示该方向可能不可辨识；哨兵命中表示解本身无效。
@@ -977,17 +1051,16 @@ function renderFitResult(res, model) {
     `<span class="fit-param"><span class="key">${k}</span> <span class="val">${typeof v === 'number' ? v.toFixed(4) : v}</span></span>`
   ).join('');
 
-  buildFitChart(res);
+  buildFitChart(res, context ? context.agent_id : undefined);
 }
 
-function buildFitChart(res) {
+function buildFitChart(res, agentId = null) {
   if (!simData) return;
   if (!hasPlotly()) {
     showPlotlyFailure('chartFit');
     return;
   }
   const df = simData.data;
-  const agentId = document.getElementById('fitAgent').value || null;
   let series = df;
   if (agentId) series = series.filter(r => r.agent_id === agentId);
 
@@ -1156,7 +1229,13 @@ function refreshStatusI18n() {
 
 // ── Init ───────────────────────────────────────────────────────────────────
 const fitModelSelect = document.getElementById('fitModel');
-if (fitModelSelect) fitModelSelect.addEventListener('change', () => { fitModelTouched = true; });
+if (fitModelSelect) {
+  fitModelSelect.addEventListener('change', () => {
+    fitModelTouched = true;
+    invalidateFitResult();
+    restoreStableViewStatus();
+  });
+}
 buildFamilyConfigs();
 loadParams();
 refreshI18n();

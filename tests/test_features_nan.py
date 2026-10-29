@@ -118,8 +118,9 @@ def test_default_supervised_features_exclude_target_and_other_agent_states() -> 
         lag_steps=1,
     )
     assert len(frame) == 1
-    assert list(frame[["agent_id", "time"]].iloc[0]) == [MEMBER, 0]
-    feature_cols = list(frame.columns[:-1])
+    first = frame.iloc[0]
+    assert [first["agent_id"], first["time"], first["target_time"]] == [MEMBER, 0, 1]
+    feature_cols = list(frame.columns[3:-1])
     assert "state_happiness" not in feature_cols
     assert "state_total_income" not in feature_cols, "不得混入目标行没有的状态列"
     assert "state_stress" in feature_cols
@@ -201,3 +202,39 @@ def test_supervised_frame_has_deterministic_time_split() -> None:
     assert test["time"].tolist() == [2, 3]
     with pytest.raises(ValueError, match="时间列"):
         FeatureExtractor.split_by_time(frame.drop(columns=["time"]), test_start_time=2)
+
+
+def test_supervised_split_purges_training_labels_reaching_test_window() -> None:
+    frame = pd.DataFrame({
+        "agent_id": ["a"] * 3,
+        "time": [0, 1, 2],
+        "target_time": [1, 2, 3],
+        "x": [1, 2, 3],
+        "y": [2, 3, 4],
+    })
+    train, test = FeatureExtractor.split_supervised_by_time(frame, test_start_time=2)
+    assert train["time"].tolist() == [0]
+    assert train["target_time"].tolist() == [1]
+    assert test["time"].tolist() == [2]
+
+
+def test_non_finite_feature_or_target_is_dropped() -> None:
+    recorder = StateRecorder(record_agents=True, record_environment=False)
+    recorder.agent_history.extend([
+        {"time": 0, "agent_id": MEMBER, "agent_type": "FamilyMember", "alive": True,
+         "state_happiness": 0.5, "state_stress": float("inf")},
+        {"time": 1, "agent_id": MEMBER, "agent_type": "FamilyMember", "alive": True,
+         "state_happiness": 0.6, "state_stress": 0.2},
+        {"time": 2, "agent_id": MEMBER, "agent_type": "FamilyMember", "alive": True,
+         "state_happiness": 0.7, "state_stress": 0.3},
+        {"time": 3, "agent_id": MEMBER, "agent_type": "FamilyMember", "alive": True,
+         "state_happiness": float("inf"), "state_stress": 0.4},
+    ])
+    X, y = FeatureExtractor(recorder).extract_features(
+        feature_columns=["state_stress"],
+        target_column="state_happiness",
+        lag_steps=1,
+    )
+    assert X.shape == (1, 1)
+    assert y is not None and y.shape == (1,)
+    assert np.isfinite(X).all() and np.isfinite(y).all()

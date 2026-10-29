@@ -38,7 +38,7 @@
       <div class="form-row" style="margin-top:16px">
         <div class="form-group">
           <label data-i18n="setup.steps">Steps</label>
-          <input type="number" id="simSteps" value="120" min="0" max="5000">
+          <input type="number" id="simSteps" value="120" min="1" max="5000">
         </div>
         <div class="form-group">
           <label data-i18n="setup.seed">Random Seed</label>
@@ -100,7 +100,7 @@
         </div>
         <div class="form-group">
           <label>&nbsp;</label>
-          <button class="btn btn-primary" id="fitRunBtn" data-i18n="fitting.run" onclick="runFitting()">Fit Model</button>
+          <button class="btn btn-primary" id="fitRunBtn" data-i18n="fitting.run" onclick="runFitting()" disabled>Fit Model</button>
         </div>
       </div>
     </div>

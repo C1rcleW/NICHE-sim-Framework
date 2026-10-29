@@ -109,12 +109,16 @@ class FeatureExtractor:
         feature_cols = self._resolve_feature_columns(df, feature_columns, target_column)
         df = df.sort_values(["agent_id", "time"])
         frame = df.loc[:, feature_cols]
-        valid = frame.notna().all(axis=1)
+        valid = pd.Series(
+            np.isfinite(frame.to_numpy()).all(axis=1),
+            index=frame.index,
+            dtype=bool,
+        )
 
         y = None
         if target_column is not None:
             y = df.groupby("agent_id", sort=False)[target_column].shift(-lag)
-            valid = valid & y.notna()
+            valid = valid & y.notna() & np.isfinite(y)
         return df, feature_cols, valid, y
 
     def extract_features(
@@ -153,9 +157,16 @@ class FeatureExtractor:
             feature_columns, target_column, lag_steps,
         )
         if df.empty:
-            return pd.DataFrame(columns=["agent_id", "time", *feature_cols, target_column])
+            return pd.DataFrame(
+                columns=["agent_id", "time", "target_time", *feature_cols, target_column],
+            )
         assert y is not None
-        result = df.loc[valid, ["agent_id", "time", *feature_cols]].copy()
+        lag = self._validate_lag(lag_steps)
+        target_time = df.groupby("agent_id", sort=False)["time"].shift(-lag)
+        result = df.loc[valid, ["agent_id", "time"]].copy()
+        result["target_time"] = target_time.loc[valid].to_numpy()
+        for column in feature_cols:
+            result[column] = df.loc[valid, column].to_numpy()
         result[target_column] = y.loc[valid].to_numpy()
         return result.reset_index(drop=True)
 
@@ -243,9 +254,30 @@ class FeatureExtractor:
         test_start_time: float,
         time_column: str = "time",
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Deterministic temporal split: < cutoff is train, >= cutoff is test."""
+        """Deterministic row split; forward-looking labels also need purge."""
         if time_column not in frame.columns:
             raise ValueError(f"数据缺少时间列 {time_column!r}")
         train = frame[frame[time_column] < test_start_time].copy()
+        test = frame[frame[time_column] >= test_start_time].copy()
+        return train, test
+
+    @staticmethod
+    def split_supervised_by_time(
+        frame: pd.DataFrame,
+        test_start_time: float,
+        time_column: str = "time",
+        target_time_column: str = "target_time",
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Time split with purging of training labels that reach the test window."""
+        missing = [
+            column for column in (time_column, target_time_column)
+            if column not in frame.columns
+        ]
+        if missing:
+            raise ValueError(f"数据缺少时间列：{missing}")
+        train = frame[
+            (frame[time_column] < test_start_time)
+            & (frame[target_time_column] < test_start_time)
+        ].copy()
         test = frame[frame[time_column] >= test_start_time].copy()
         return train, test

@@ -111,7 +111,7 @@ MAX_MEMBERS_PER_FAMILY = 50
 MAX_TOTAL_MEMBERS = 200
 
 SIM_LIMITS: dict[str, dict[str, int]] = {
-    "steps": {"min": 0, "max": MAX_STEPS},
+    "steps": {"min": 1, "max": MAX_STEPS},
     "families": {"min": 0, "max": MAX_FAMILIES},
     "members_per_family": {"min": 0, "max": MAX_MEMBERS_PER_FAMILY},
     "total_members": {"min": 0, "max": MAX_TOTAL_MEMBERS},

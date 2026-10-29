@@ -120,8 +120,8 @@ def _load_fit_timeout_seconds() -> float:
         logger.warning('FAMILY_ABM_FIT_TIMEOUT_SECONDS=%r 不是数字，回退到 %.0fs',
                        raw, DEFAULT_FIT_TIMEOUT_SECONDS)
         return DEFAULT_FIT_TIMEOUT_SECONDS
-    if seconds <= 0:
-        logger.warning('FAMILY_ABM_FIT_TIMEOUT_SECONDS=%r 不是正数，回退到 %.0fs',
+    if not math.isfinite(seconds) or seconds <= 0:
+        logger.warning('FAMILY_ABM_FIT_TIMEOUT_SECONDS=%r 不是有限正数，回退到 %.0fs',
                        raw, DEFAULT_FIT_TIMEOUT_SECONDS)
         return DEFAULT_FIT_TIMEOUT_SECONDS
     return seconds
@@ -196,7 +196,7 @@ class SimConfig(BaseModel):
     # allow_inf_nan=False：JSON 允许 NaN/Infinity 字面量，输入层直接拒绝。
     model_config = ConfigDict(allow_inf_nan=False)
 
-    steps: StrictInt = Field(default=120, ge=0, le=MAX_STEPS)
+    steps: StrictInt = Field(default=120, ge=1, le=MAX_STEPS)
     # 随机种子：给出后同一配置可复现（含智能体初始化）。
     seed: StrictInt | None = 42
     # 动力学参数：必须是数值，且键和范围由 PARAM_SPECS 统一约束。
@@ -795,11 +795,12 @@ async def api_niche(run_id: str | None = None):
                     raw_values[dimension] = raw
                     if raw is not None:
                         observed[dimension] = raw
+                        # 直接按维度写入；update_from_agent_state 的默认键是
+                        # income/education/...，传入维度名会静默保留 0.5 默认坐标。
+                        n.set_position(dimension, raw)
             else:
                 raw_values = {dimension: None for dimension in _NICHE_STATE_FIELDS}
 
-            if observed:
-                n.update_from_agent_state(observed)
             position = {
                 dimension: n.position[dimension] if dimension in observed else None
                 for dimension in n.dimensions

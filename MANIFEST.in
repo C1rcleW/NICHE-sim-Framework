@@ -5,10 +5,11 @@
 # 但用户解包后应该看到"的文件，不额外扩张体积。
 #
 # 刻意不包含：
-#   docs/        研究设计文档（docx + md），面向仓库阅读，非安装所需
+#   docs/ 其余内容  研究设计文档（docx + md），面向仓库阅读，非安装所需
 #   experiments/ 研究实验脚本与结果图，随仓库分发
 #   audits/      历史审查报告
 #   tools/       开发与打包辅助脚本
 include CHANGELOG.md
 include CONTRIBUTING.md
 include CITATION.cff
+include docs/R0-研究决策记录.md

@@ -34,3 +34,5 @@ def test_default_web_niche_marks_missing_social_dimension() -> None:
         assert niche["position"]["economic"] is not None
         assert math.isfinite(niche["position"]["economic"])
         assert "economic" in niche["observed_dimensions"]
+        expected = max(0.0, min(1.0, niche["raw_values"]["economic"]))
+        assert niche["position"]["economic"] == pytest.approx(expected)

@@ -195,6 +195,8 @@ function loadDashboard(apiResponses, options) {
 
   const context = vm.createContext(sandbox);
   vm.runInContext(source, context, { filename: DASHBOARD });
+  // 大多数行为场景模拟“已完成一次运行”的拟合页；生产代码禁止无 run_id 拟合。
+  vm.runInContext("simRunId = 'test-run';", context);
   return { sandbox, get, requests, pendingResolvers, plots, context };
 }
 
@@ -548,6 +550,45 @@ async function scenarioNonPositiveR2DoesNotLookLikePass() {
   check(!goodKpis.includes('result-kpi muted'), 'R² 为正时不出现降级样式');
 }
 
+async function scenarioFitContextIsInvalidated() {
+  console.log('\n== 场景 S5b：切换成员/模型或运行中不得复用旧拟合 ==');
+  const { sandbox, context, get, requests } = loadDashboard((url) => (
+    String(url).includes('/api/models') ? ONE_AVAILABLE : undefined
+  ));
+  const data = {
+    agents: [
+      { id: 'A', name: 'Member A', role: 'parent', age: 35 },
+      { id: 'B', name: 'Member B', role: 'child', age: 8 },
+    ],
+    columns: [],
+    data: [],
+    steps: 0,
+  };
+  vm.runInContext(`simData = ${JSON.stringify(data)};`, context);
+  sandbox.buildAgentList();
+  get('fitAgent').value = '';
+  await sandbox.loadModelInfo();
+  get('fitModel').value = 'logistic';
+  get('fitModel').dataset.allDisabled = '';
+  await sandbox.runFitting();
+  check(get('fitResultCard').style.display === 'block', '拟合结果已显示');
+
+  get('fitAgent').value = 'B';
+  get('fitAgent').onchange();
+  check(get('fitResultCard').style.display === 'none', '切换成员后旧拟合结果被隐藏');
+  check(
+    vm.runInContext('lastFitResult === null && lastFitContext === null', context),
+    '切换成员后拟合上下文被清除',
+  );
+
+  vm.runInContext('runInFlight = true;', context);
+  const before = requests.length;
+  await sandbox.runFitting();
+  const fitCalls = requests.slice(before).filter((r) => r.url.includes('/api/fit'));
+  check(fitCalls.length === 0, '运行中禁止发起拟合请求');
+  vm.runInContext('runInFlight = false;', context);
+}
+
 async function scenarioAgentNamesAreRenderedAsText() {
   console.log('\n== 场景 S5：智能体名称不得被当作 HTML ==');
   const { sandbox, context, get } = loadDashboard(() => ({}));
@@ -624,6 +665,7 @@ async function scenarioFitChartUsesOnlyMappedStates() {
   await scenarioAutoMappingIsVisible();
   await scenarioNonPositiveR2DoesNotLookLikePass();
   await scenarioAgentNamesAreRenderedAsText();
+  await scenarioFitContextIsInvalidated();
   await scenarioFitChartUsesOnlyMappedStates();
   console.log('');
   if (failures.length) {
