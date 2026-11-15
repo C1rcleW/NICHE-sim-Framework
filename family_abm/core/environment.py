@@ -86,6 +86,16 @@ class Environment:
                     if member is not None:
                         member.environment = None
                         del self.agents[member_id]
+            else:
+                # 注销单个成员时对称清理其所属家庭，避免家庭仍汇总已注销成员
+                # 的收入/压力（只删环境注册会留下静默不一致的中间状态）。
+                # 遍历全部容器：成员若被多个家庭引用，逐一摘除，不留残留。
+                for container in self.agents.values():
+                    container_members = getattr(container, "members", None)
+                    if isinstance(container_members, dict) and agent_id in container_members:
+                        detach = getattr(container, "_detach_member", None)
+                        if detach is not None:
+                            detach(agent_id)
             agent.environment = None
             del self.agents[agent_id]
 

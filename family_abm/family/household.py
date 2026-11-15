@@ -30,6 +30,10 @@ class Household(Agent):
         self.set_attribute("name", name)
         self.members: dict[str, FamilyMember] = {}
         self.relationships: dict[tuple[str, str], Relationship] = {}
+        # 成员标签序号在**首次加入时**固定，移除后再加入新成员不会复用旧序号，
+        # 避免新关系与现存关系派生出同一条随机流（见 _member_label）。
+        self._member_seq: dict[str, int] = {}
+        self._next_member_seq = 0
         if environment is not None:
             self.environment = environment
 
@@ -60,6 +64,9 @@ class Household(Agent):
         退回全局 ``random`` 而破坏可复现性。
         """
         self.members[member.id] = member
+        if member.id not in self._member_seq:
+            self._member_seq[member.id] = self._next_member_seq
+            self._next_member_seq += 1
         env = self.environment if self.environment is not None else getattr(member, "environment", None)
         rng = getattr(env, "rng", None) if env is not None else None
         seed = getattr(env, "seed", None) if env is not None else None
@@ -68,9 +75,10 @@ class Household(Agent):
         scope = str(env.container_seq(self)) if env is not None else None
         for existing_id in self.members:
             if existing_id != member.id:
-                # 关系身份用**家庭名 + 成员在家庭中的加入序号**，而不是 uuid：
+                # 关系身份用**家庭名 + 成员首次加入时的固定序号**，而不是 uuid：
                 # uuid 每次运行都不同，会让按 id 排序的关系顺序变化，
-                # 进而导致同一 seed 下关系状态不可复现。
+                # 进而导致同一 seed 下关系状态不可复现。序号不随移除/重加复用，
+                # 保证不同关系不会派生出同一条随机流。
                 rel = Relationship(
                     agent_a_id=member.id,
                     agent_b_id=existing_id,
@@ -86,8 +94,8 @@ class Household(Agent):
             self.environment.add_agent(member)
 
     def _member_label(self, member_id: str) -> str:
-        """成员的稳定标签：家庭名 + 加入序号（与 uuid 无关）。"""
-        order = list(self.members).index(member_id) if member_id in self.members else -1
+        """成员的稳定标签：家庭名 + 首次加入时的固定序号（与 uuid 无关）。"""
+        order = self._member_seq.get(member_id, -1)
         name = getattr(self, "name", "") or getattr(self, "attributes", {}).get("name", "")
         return f"{name}#{order}"
 
@@ -95,12 +103,17 @@ class Household(Agent):
     def name(self) -> str:
         return str(self.get_attribute("name") or "")
 
-    def remove_member(self, member_id: str) -> None:
+    def _detach_member(self, member_id: str) -> None:
+        """仅清理家庭侧成员与关系，不触碰环境注册（供环境注销时对称调用）。"""
         if member_id in self.members:
             del self.members[member_id]
             keys_to_remove = [k for k in self.relationships if member_id in k]
             for k in keys_to_remove:
                 del self.relationships[k]
+
+    def remove_member(self, member_id: str) -> None:
+        if member_id in self.members:
+            self._detach_member(member_id)
             if self.environment is not None:
                 self.environment.remove_agent(member_id)
 

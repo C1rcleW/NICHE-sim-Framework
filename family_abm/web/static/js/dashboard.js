@@ -49,7 +49,7 @@ const I18N = {
     'charts.niche_no_points': '没有可绘制的生境点：经济或社会维度缺失。',
     'charts.niche_missing_dims': '缺失维度：{0}；缺少坐标的成员不会被绘制。',
     'charts.niche_clipped_dims': '以下原始值被截断到 [0,1]：{0}；原始值见 /api/niche。',
-    'charts.plotly_failed': 'Plotly 未能加载，图表不可用；请检查网络或改用离线版资源。',
+    'charts.plotly_failed': 'Plotly 本地资源未能加载，图表不可用；请检查安装完整性（web/static/vendor）。',
     'network.failed': '家庭关系网络加载失败。',
     'fitting.run_in_progress': '仿真仍在运行，请完成后再拟合。',
     'fitting.warn': '请先运行仿真，然后选择模型进行拟合。',

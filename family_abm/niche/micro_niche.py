@@ -23,12 +23,20 @@ class MicroNiche:
                 raise ValueError(f'生境坐标必须是有限数值，收到 {value!r}')
             self.position[dimension] = max(0.0, min(1.0, numeric))
 
-    def get_position_vector(self) -> np.ndarray:
-        return np.array([self.position[d] for d in self.dimensions])
+    def get_position_vector(self, dimensions: list[str] | None = None) -> np.ndarray:
+        dims = dimensions if dimensions is not None else self.dimensions
+        return np.array([self.position[d] for d in dims])
 
     def distance_to(self, other: MicroNiche, metric: str = "euclidean") -> float:
-        v1 = self.get_position_vector()
-        v2 = other.get_position_vector()
+        # 按**维度名**对齐而非各自声明顺序：顺序不同但坐标相同应得 0;
+        # 维度集不同则无法比较，显式报错而不是让 numpy 广播静默产出错误距离。
+        if set(self.dimensions) != set(other.dimensions):
+            raise ValueError(
+                f"生境维度集不同，无法比较距离：{self.dimensions} vs {other.dimensions}"
+            )
+        dims = sorted(self.dimensions)
+        v1 = self.get_position_vector(dims)
+        v2 = other.get_position_vector(dims)
         if metric == "euclidean":
             return float(np.linalg.norm(v1 - v2))
         elif metric == "manhattan":
