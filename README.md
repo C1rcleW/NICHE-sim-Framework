@@ -480,7 +480,7 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
   author = {C1rcleW},
   year   = {2026},
   url    = {https://github.com/C1rcleW/NICHE-sim-Framework},
-  note   = {Version 0.1.2}
+  note   = {Version 0.1.2.1}
 }
 ```
 
@@ -494,9 +494,9 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
 
 ## 版本
 
-当前版本 **0.1.2**。变更历史见 [CHANGELOG.md](CHANGELOG.md)，
+当前版本 **0.1.2.1**。变更历史见 [CHANGELOG.md](CHANGELOG.md)，
 发布产物见 [Releases](https://github.com/C1rcleW/NICHE-sim-Framework/releases)，
-本次发布说明见 [docs/release-notes-0.1.2.md](docs/release-notes-0.1.2.md)。
+本次发布说明见 [docs/release-notes-0.1.2.1.md](docs/release-notes-0.1.2.1.md)。
 
 引用本项目的规范格式见 [CITATION.cff](CITATION.cff)。
 
@@ -507,13 +507,13 @@ CI 在 Python 3.10 / 3.12 / 3.13（Ubuntu）与 3.12（Windows）上运行测试
 1. 同步更新 `pyproject.toml`、`family_abm/__init__.py`、`CITATION.cff`、
    `README.md`、研究设计生成器与产物，并在 `CHANGELOG.md` 记录变更
    （版本一致性由 `tests/test_release_consistency.py` 强制）
-2. 打 tag 并推送：`git tag -a v0.1.2 -m "..." && git push origin v0.1.2`
+2. 打 tag 并推送：`git tag -a v0.1.2.1 -m "..." && git push origin v0.1.2.1`
 3. CI 的 `release` job 自动构建 wheel 与 sdist、创建 Release 并附加产物
    （Release 不存在时自动创建；带 `-rc.1` 这类后缀的 tag 自动标记为 pre-release）
 4. 用工具生成结构化发布说明，粘贴到 Release 覆盖自动生成的正文：
 
    ```bash
-   python tools/extract_release_notes.py 0.1.2 docs/release-notes-0.1.2.md
+   python tools/extract_release_notes.py 0.1.2.1 docs/release-notes-0.1.2.1.md
    ```
 
 产物版本号与 tag 的一致性由 CI 强制校验，不一致会直接失败。
